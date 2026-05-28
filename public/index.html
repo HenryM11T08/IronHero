@@ -11,8 +11,8 @@
     /* ── page layout ── */
     .train-layout {
       display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 20px;
+      grid-template-columns: 1fr 360px;
+      gap: 24px;
       align-items: start;
     }
     .left-col  { display: flex; flex-direction: column; gap: 18px; }
@@ -35,34 +35,43 @@
     .ex-table {
       width: 100%;
       border-collapse: collapse;
+      min-width: 700px;
     }
     .ex-table th {
       font-size: .48rem; color: var(--dim);
       letter-spacing: .12em; text-transform: uppercase;
-      padding: 6px 10px; border-bottom: 1px solid var(--border);
+      padding: 8px 12px; border-bottom: 1px solid var(--border);
       font-weight: 400; text-align: left;
     }
-    .ex-row td { padding: 6px 6px; vertical-align: middle; }
+    .ex-row td { padding: 5px 6px; vertical-align: middle; }
     .ex-row td input {
-      background: rgba(255,255,255,.03);
+      background: rgba(255,255,255,.05);
       border: 1px solid var(--border);
       color: var(--white);
       font-family: 'Exo 2', sans-serif;
-      font-size: .82rem;
-      padding: 7px 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 9px 12px;
       outline: none;
       width: 100%;
       transition: border-color .15s, box-shadow .15s;
     }
     .ex-row td input:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(0,229,255,.1);
+      box-shadow: 0 0 0 2px rgba(0,229,255,.12);
     }
     .ex-row td input.error { border-color: var(--red); }
-    .ex-row td.col-ex    { min-width: 200px; }
-    .ex-row td.col-num   { width: 90px; }
-    .ex-row td.col-note  { min-width: 140px; }
-    .ex-row td.col-del   { width: 40px; text-align: center; }
+    /* number inputs — big and readable */
+    .ex-row td input[type="number"] {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .75rem;
+      text-align: center;
+      padding: 9px 6px;
+    }
+    .ex-row td.col-ex    { min-width: 220px; }
+    .ex-row td.col-num   { width: 110px; min-width: 100px; }
+    .ex-row td.col-note  { min-width: 130px; }
+    .ex-row td.col-del   { width: 44px; text-align: center; }
 
     .row-num {
       font-family: 'Press Start 2P', monospace;
@@ -72,12 +81,12 @@
 
     /* stat preview pill on each row */
     .row-preview {
-      font-size: .58rem; color: var(--dim);
+      font-size: .6rem; color: var(--dim);
       padding: 4px 8px;
       white-space: nowrap;
-      min-width: 160px;
+      min-width: 180px;
     }
-    .row-preview span { margin-right: 6px; }
+    .row-preview span { margin-right: 7px; }
 
     .del-row-btn {
       background: none; border: none;
@@ -247,13 +256,13 @@
           <table class="ex-table">
             <thead>
               <tr>
-                <th style="width:32px">#</th>
+                <th style="width:36px">#</th>
                 <th class="col-ex">Exercise</th>
-                <th class="col-num">Weight<br><span style="font-size:.38rem;opacity:.6">lbs</span></th>
-                <th class="col-num">Sets</th>
-                <th class="col-num">Reps</th>
+                <th class="col-num" style="text-align:center">Weight<br><span style="font-size:.36rem;opacity:.5">(lbs)</span></th>
+                <th class="col-num" style="text-align:center">Sets</th>
+                <th class="col-num" style="text-align:center">Reps</th>
                 <th class="col-note">Notes</th>
-                <th></th>
+                <th style="min-width:190px">Preview</th>
                 <th class="col-del"></th>
               </tr>
             </thead>
