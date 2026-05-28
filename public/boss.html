@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRON HERO — Boss Arena</title>
+  <script src="game.js"></script>
+  <style id="sharedStyles"></style>
+  <style>
+
+    /* ── two-column layout ── */
+    .boss-layout {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* ── boss list ── */
+    .boss-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .boss-item {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      cursor: pointer;
+      transition: all .2s;
+      position: relative; overflow: hidden;
+    }
+    .boss-item::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,109,0,.05), transparent);
+      opacity: 0; transition: opacity .2s;
+    }
+    .boss-item:hover::before { opacity: 1; }
+    .boss-item:hover   { border-color: var(--fire); }
+    .boss-item.locked  { opacity: .35; cursor: not-allowed; }
+    .boss-item.done    { border-color: rgba(0,230,118,.25); opacity: .65; }
+    .boss-item.active  { border-color: var(--fire); background: rgba(255,109,0,.07); }
+
+    .boss-tag {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .38rem; float: right;
+    }
+    .boss-tag.tag-done  { color: var(--hp); }
+    .boss-tag.tag-lock  { color: var(--dim); }
+
+    .boss-name {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .55rem; color: var(--fire); margin-bottom: 5px;
+    }
+    .boss-item.done .boss-name { color: var(--hp); }
+    .boss-meta   { font-size: .65rem; color: var(--dim); line-height: 1.7; }
+    .boss-reward { font-size: .62rem; color: var(--gold); margin-top: 3px; }
+
+    /* ── arena panel ── */
+    .arena {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--fire);
+      padding: 22px;
+    }
+    .arena-empty {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 320px;
+    }
+    .arena-empty p {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .55rem; color: var(--dim);
+      text-align: center; line-height: 2;
+    }
+
+    /* ── VS row ── */
+    .battle-vs {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 14px; align-items: center;
+      margin-bottom: 18px;
+    }
+    .combatant { text-align: center; }
+    .combatant-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .5rem; margin-bottom: 8px;
+    }
+    .combatant-sprite {
+      font-size: 3.4rem; line-height: 1;
+      display: block; margin-bottom: 10px;
+    }
+    .combatant-sprite.shake { animation: shk .4s ease; }
+    @keyframes shk {
+      0%,100% { transform: translateX(0); }
+      20%  { transform: translateX(-9px); }
+      40%  { transform: translateX(9px); }
+      60%  { transform: translateX(-5px); }
+      80%  { transform: translateX(5px); }
+    }
+    .vs-glyph {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .9rem; color: var(--fire);
+      text-shadow: 0 0 14px rgba(255,109,0,.7);
+    }
+    .hp-row {
+      display: flex; justify-content: space-between;
+      font-size: .55rem; margin-bottom: 4px;
+    }
+    .hp-bar { height: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border); overflow: hidden; }
+    .hp-bar-fill { height: 100%; transition: width .5s ease; }
+    .hero-hpfill { background: linear-gradient(90deg, #00c853, #00e676); }
+    .boss-hpfill { background: linear-gradient(90deg, #d32f2f, var(--fire)); }
+
+    /* ── battle log ── */
+    .battle-log {
+      max-height: 145px; overflow-y: auto;
+      background: rgba(0,0,0,.22);
+      border: 1px solid var(--border);
+      padding: 10px 13px;
+      margin-bottom: 14px;
+      font-size: .68rem; line-height: 1.8;
+    }
+    .battle-log::-webkit-scrollbar { width: 3px; }
+    .battle-log::-webkit-scrollbar-thumb { background: var(--border); }
+    .bl-line { animation: bIn .2s ease; }
+    @keyframes bIn { from{opacity:0} to{opacity:1} }
+
+    /* ── action buttons ── */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .act-btn {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'Press Start 2P', monospace;
+      font-size: .42rem; padding: 11px 6px;
+      cursor: pointer; text-align: center;
+      line-height: 1.85; transition: all .15s;
+    }
+    .act-btn:hover { border-color: var(--accent); background: rgba(0,229,255,.06); }
+    .act-btn.special      { border-color: rgba(224,64,251,.35); color: var(--pow); }
+    .act-btn.special:hover{ border-color: var(--pow); background: rgba(224,64,251,.07); }
+    .act-btn:disabled { opacity: .28; cursor: not-allowed; }
+    .act-sub { font-size: .35rem; display: block; opacity: .7; margin-top: 3px; }
+
+    /* ── result screen ── */
+    .result-wrap { text-align: center; padding: 36px 20px; }
+    .result-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 1rem; margin-bottom: 14px;
+    }
+    .result-title.win  { color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,.6); }
+    .result-title.lose { color: var(--red); }
+    .result-body {
+      font-size: .75rem; color: var(--accent);
+      line-height: 2.1; margin-bottom: 20px;
+    }
+
+    @media (max-width: 820px) {
+      .boss-layout  { grid-template-columns: 1fr; }
+      .action-grid  { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="navMount"></div>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>💀 BOSS ARENA</h1>
+    <p>Challenge increasingly powerful bosses. Defeat them to earn XP and skill points.</p>
+  </div>
+
+  <!-- mini hero widget -->
+  <div id="miniCharMount"></div>
+
+  <div class="boss-layout">
+
+    <!-- ── left: boss list ── -->
+    <div class="card fire">
+      <div class="card-title">▸ BOSS GAUNTLET</div>
+      <div class="boss-list" id="bossList"></div>
+    </div>
+
+    <!-- ── right: arena ── -->
+    <div id="arenaMount">
+      <div class="arena">
+        <div class="arena-empty">
+          <p>SELECT A BOSS<br>FROM THE LIST<br>TO BEGIN</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="ach-popup" id="achPopup">
+  <div class="ach-label">🏆 ACHIEVEMENT</div>
+  <div class="ach-title" id="achTitle"></div>
+  <div class="ach-desc"  id="achDesc"></div>
+</div>
+
+<script>
+// ── boot ──
+document.getElementById('sharedStyles').textContent  = SHARED_CSS;
+document.getElementById('navMount').innerHTML        = navHTML('boss.html');
+document.getElementById('miniCharMount').innerHTML   = miniCharHTML();
+
+let G      = loadState();
+rebuildSkillBonuses(G);
+renderMiniChar(G);
+
+let battle = null;   // active battle state
+
+// ─────────────────────────────────────────
+//  BOSS LIST
+// ─────────────────────────────────────────
+function renderBossList() {
+  const list = document.getElementById('bossList');
+  list.innerHTML = '';
+  BOSSES.forEach(boss => {
+    const defeated = G.defeatedBosses.includes(boss.id);
+    const locked   = G.hero.level < boss.levelReq;
+
+    const div = document.createElement('div');
+    div.className = 'boss-item' + (defeated ? ' done' : locked ? ' locked' : '');
+
+    div.innerHTML = `
+      <div class="boss-tag ${defeated ? 'tag-done' : 'tag-lock'}">
+        ${defeated ? '✓ DEFEATED' : locked ? 'LVL ' + boss.levelReq + ' REQ' : ''}
+      </div>
+      <div class="boss-name">${boss.icon} ${boss.name}</div>
+      <div class="boss-meta">
+        Requires Lv${boss.levelReq} &nbsp;·&nbsp;
+        HP: ${boss.hp} &nbsp;·&nbsp; ATK: ${boss.atk}
+      </div>
+      <div class="boss-reward">
+        ⚡ ${boss.xpReward} XP &nbsp;·&nbsp; ✦ ${boss.spReward} Skill Pt
+      </div>`;
+
+    if (!locked) {
+      div.onclick = () => {
+        document.querySelectorAll('.boss-item').forEach(el => el.classList.remove('active'));
+        div.classList.add('active');
+        startBattle(boss);
+      };
+    }
+    list.appendChild(div);
+  });
+}
+
+// ─────────────────────────────────────────
+//  START BATTLE
+// ─────────────────────────────────────────
+function startBattle(boss) {
+  const h  = G.hero;
+  const sb = G.skillBonuses;
+  const heroAtk = Math.round((h.str * 0.5 + h.pow * 0.3 + h.agi * 0.2) * (sb.bossDmgMult || 1));
+
+  battle = {
+    boss:          { ...boss, currentHp: boss.hp },
+    hero:          { hp: h.hp, maxHp: h.maxHp, atk: heroAtk },
+    turn:          0,
+    log:           [],
+    over:          false,
+    win:           false,
+    blastCd:       0,
+    megaCd:        0,
+    stunned:       false,
+    atkDebuff:     1,
+    atkDebuffTurns:0,
+    usedUndying:   false,
+  };
+  renderArena();
+}
+
+// ─────────────────────────────────────────
+//  RENDER ARENA
+// ─────────────────────────────────────────
+function renderArena() {
+  const mount = document.getElementById('arenaMount');
+
+  // ── no battle ──
+  if (!battle) {
+    mount.innerHTML = `
+      <div class="arena">
+        <div class="arena-empty">
+          <p>SELECT A BOSS<br>FROM THE LIST<br>TO BEGIN</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // ── result screen ──
+  if (battle.over) {
+    const win = battle.win;
+    mount.innerHTML = `
+      <div class="arena">
+        <div class="result-wrap">
+          <div class="result-title ${win ? 'win' : 'lose'}">
+            ${win ? '⚔ VICTORY!' : '💀 DEFEATED...'}
+          </div>
+          <div class="result-body">
+            ${win
+              ? `+${battle.boss.xpReward} XP earned<br>
+                 +${battle.boss.spReward} Skill Point${battle.boss.spReward > 1 ? 's' : ''} earned<br>
+                 ★ ${battle.boss.name} conquered!<br>
+                 HP restored to 30%`
+              : `You fought bravely.<br>
+                 Train harder and return stronger!`}
+          </div>
+          <button class="btn btn-ghost" onclick="closeBattle()">← BACK TO GAUNTLET</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // ── active battle ──
+  const b   = battle.boss;
+  const h   = battle.hero;
+  const sb  = G.skillBonuses;
+  const hPct = Math.max(0, Math.round(h.hp / h.maxHp * 100));
+  const bPct = Math.max(0, Math.round(b.currentHp / b.hp * 100));
+
+  // battle log lines (newest on top)
+  const logHtml = battle.log.slice(-14).reverse()
+    .map(l => `<div class="bl-line">${l}</div>`).join('');
+
+  // special action buttons
+  let extraBtns = '';
+  if (sb.hasBlast) {
+    const cd = battle.blastCd;
+    extraBtns += `
+      <button class="act-btn special" onclick="doAction('blast')" ${cd > 0 ? 'disabled' : ''}>
+        💥 BLAST
+        <span class="act-sub">${cd > 0 ? 'Cooldown: ' + cd : '3× damage'}</span>
+      </button>`;
+  }
+  if (sb.hasMega) {
+    const cd = battle.megaCd;
+    extraBtns += `
+      <button class="act-btn special" onclick="doAction('mega')" ${cd > 0 ? 'disabled' : ''}>
+        🌩 MEGA STRIKE
+        <span class="act-sub">${cd > 0 ? 'Cooldown: ' + cd : '5× damage'}</span>
+      </button>`;
+  }
+
+  mount.innerHTML = `
+    <div class="arena">
+      <div class="card-title">▸ FIGHTING: ${b.name}</div>
+
+      <div class="battle-vs">
+
+        <div class="combatant">
+          <div class="combatant-label" style="color:var(--accent)">${G.hero.name}</div>
+          <span class="combatant-sprite" id="heroSpr">🧙</span>
+          <div class="hp-row">
+            <span>❤ HP</span>
+            <span>${h.hp} / ${h.maxHp}</span>
+          </div>
+          <div class="hp-bar">
+            <div class="hp-bar-fill hero-hpfill" style="width:${hPct}%"></div>
+          </div>
+        </div>
+
+        <div class="vs-glyph">VS</div>
+
+        <div class="combatant">
+          <div class="combatant-label" style="color:var(--fire)">${b.name}</div>
+          <span class="combatant-sprite" id="bossSpr">${b.icon}</span>
+          <div class="hp-row">
+            <span>💀 HP</span>
+            <span>${b.currentHp} / ${b.hp}</span>
+          </div>
+          <div class="hp-bar">
+            <div class="hp-bar-fill boss-hpfill" style="width:${bPct}%"></div>
+          </div>
+        </div>
+
+      </div><!-- /battle-vs -->
+
+      <div class="battle-log" id="battleLog">${logHtml}</div>
+
+      <div class="action-grid">
+        <button class="act-btn" onclick="doAction('attack')">
+          ⚔ ATTACK
+          <span class="act-sub">Normal strike</span>
+        </button>
+        <button class="act-btn" onclick="doAction('heavy')"
+                ${battle.stunned ? 'disabled' : ''}>
+          🔨 HEAVY
+          <span class="act-sub">1.8× / 35% miss</span>
+        </button>
+        <button class="act-btn" onclick="doAction('defend')">
+          🛡 DEFEND
+          <span class="act-sub">Half damage taken</span>
+        </button>
+        ${extraBtns}
+      </div>
+
+    </div><!-- /arena -->`;
+}
+
+// ─────────────────────────────────────────
+//  COMBAT LOGIC
+// ─────────────────────────────────────────
+function doAction(action) {
+  if (!battle || battle.over) return;
+  const sb  = G.skillBonuses;
+  const h   = battle.hero;
+  const b   = battle.boss;
+  const log = [];
+
+  // tick cooldowns
+  if (battle.blastCd > 0)       battle.blastCd--;
+  if (battle.megaCd  > 0)       battle.megaCd--;
+  if (battle.atkDebuffTurns > 0) battle.atkDebuffTurns--;
+  else                           battle.atkDebuff = 1;
+
+  let defending = false;
+
+  // ── HERO TURN ──
+  if (battle.stunned) {
+    log.push('⚡ <b>STUNNED</b> — You lose this turn!');
+    battle.stunned = false;
+  } else {
+    let base = Math.max(1, Math.round(h.atk * battle.atkDebuff - b.def * 0.4));
+    let dmg  = base;
+    let hit  = true;
+
+    switch (action) {
+      case 'heavy':
+        if (Math.random() < 0.35) { log.push('💨 Heavy swing <b>MISSED!</b>'); hit = false; }
+        else                        dmg = Math.round(base * 1.8);
+        break;
+      case 'defend':
+        defending = true;
+        dmg = Math.round(base * 0.6);
+        log.push('🛡 You take a defensive stance.');
+        break;
+      case 'blast':
+        battle.blastCd = 3;
+        dmg = base * 3;
+        log.push('💥 <b>ENERGY BLAST!</b>');
+        break;
+      case 'mega':
+        battle.megaCd = 5;
+        dmg = base * 5;
+        log.push('🌩 <b>MEGA STRIKE!!!</b>');
+        break;
+    }
+
+    // double strike proc
+    if ((sb.doubleStrike || 0) > 0 && Math.random() < sb.doubleStrike && hit) {
+      dmg = Math.round(dmg * 1.8);
+      log.push('💨 <b>DOUBLE STRIKE</b> procs!');
+    }
+
+    if (hit) {
+      dmg = Math.round(dmg);
+      b.currentHp = Math.max(0, b.currentHp - dmg);
+      log.push(`⚔ You deal <b>${dmg}</b> damage! Boss HP: ${b.currentHp}`);
+      shakeSprite('bossSpr');
+    }
+  }
+
+  // ── BOSS DEAD? ──
+  if (b.currentHp <= 0) {
+    battle.over = true;
+    battle.win  = true;
+    log.push(`🏆 <b>${b.name} DEFEATED!</b>`);
+    battle.log.push(...log);
+    applyVictory(b);
+    renderArena();
+    return;
+  }
+
+  // ── BOSS TURN ──
+  const dodged = Math.random() < (sb.dodgeChance || 0);
+  if (dodged) {
+    log.push('🌀 You <b>DODGE</b> the boss attack!');
+  } else {
+    let bAtk = b.atk;
+    let bMsg = '';
+
+    if (Math.random() < b.specialChance) {
+      switch (b.specialType) {
+        case 'stun':
+          battle.stunned = true;
+          bAtk = Math.round(bAtk * 0.3);
+          bMsg = `✨ Boss uses: <b>${b.special}</b>`;
+          break;
+        case 'dmgx2':
+          bAtk = bAtk * 2;
+          bMsg = `✨ Boss uses: <b>${b.special}</b>`;
+          break;
+        case 'dmgx4':
+          bAtk = bAtk * 4;
+          bMsg = `✨ Boss uses: <b>${b.special}</b>`;
+          break;
+        case 'triple':
+          bAtk = Math.round(bAtk * 0.4 * 3);
+          bMsg = `✨ Boss uses: <b>${b.special}</b>`;
+          break;
+        case 'debuff':
+          battle.atkDebuff      = 0.7;
+          battle.atkDebuffTurns = 2;
+          bAtk = Math.round(bAtk * 0.6);
+          bMsg = `✨ Boss uses: <b>${b.special}</b>`;
+          break;
+      }
+      if (bMsg) log.push(bMsg);
+    }
+
+    let dmgTaken = Math.max(1, Math.round(
+      bAtk * (defending ? 0.5 : 1) * (1 - (sb.dmgReduction || 0))
+    ));
+
+    // Undying proc
+    if (sb.undying && !battle.usedUndying && h.hp - dmgTaken <= 0) {
+      dmgTaken          = h.hp - 1;
+      battle.usedUndying = true;
+      log.push('💚 <b>UNDYING</b> triggers — survive at 1 HP!');
+    }
+
+    h.hp = Math.max(0, h.hp - dmgTaken);
+    log.push(`👊 Boss hits for <b>${dmgTaken}</b> damage! Your HP: ${h.hp}`);
+    shakeSprite('heroSpr');
+  }
+
+  // ── HERO DEAD? ──
+  if (h.hp <= 0) {
+    battle.over = true;
+    battle.win  = false;
+    log.push('💀 <b>You have been defeated...</b>');
+    battle.log.push(...log);
+    renderArena();
+    return;
+  }
+
+  battle.turn++;
+  battle.log.push(...log);
+  renderArena();
+}
+
+function shakeSprite(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('shake');
+  setTimeout(() => el.classList.remove('shake'), 500);
+}
+
+// ─────────────────────────────────────────
+//  VICTORY REWARDS
+// ─────────────────────────────────────────
+function applyVictory(boss) {
+  G.defeatedBosses.push(boss.id);
+  const h  = G.hero;
+  h.xp         += boss.xpReward;
+  h.totalXP    += boss.xpReward;
+  h.skillPoints += boss.spReward;
+
+  applyLevelUps(G);
+
+  // restore 30% HP
+  h.hp = Math.min(h.maxHp, h.hp + Math.round(h.maxHp * 0.3));
+
+  saveState(G);
+  renderMiniChar(G);
+  renderBossList();
+  showAch('BOSS DEFEATED!', boss.name + ' — +' + boss.xpReward + ' XP · +' + boss.spReward + ' SP');
+}
+
+// ─────────────────────────────────────────
+//  BACK TO GAUNTLET
+// ─────────────────────────────────────────
+function closeBattle() {
+  battle = null;
+  document.querySelectorAll('.boss-item').forEach(el => el.classList.remove('active'));
+  renderArena();
+}
+
+// ── init ──
+renderBossList();
+</script>
+</body>
+</html>

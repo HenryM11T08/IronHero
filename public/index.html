@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRON HERO — Train</title>
+  <script src="game.js"></script>
+  <style id="sharedStyles"></style>
+  <style>
+    /* ── layout ── */
+    .train-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+      align-items: start;
+    }
+    .left-col  { display: flex; flex-direction: column; gap: 18px; }
+    .right-col { display: flex; flex-direction: column; gap: 18px; }
+
+    /* ── form ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    /* ── hero card ── */
+    .hero-card { text-align: center; padding: 24px 20px; }
+    .hero-name  {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .7rem; color: var(--gold);
+      margin-bottom: 4px;
+    }
+    .hero-class {
+      font-size: .62rem; color: var(--dim);
+      letter-spacing: .12em; margin-bottom: 12px;
+    }
+    .lvl-badge {
+      display: inline-block;
+      font-family: 'Press Start 2P', monospace;
+      font-size: .5rem; background: var(--gold);
+      color: #000; padding: 3px 9px; margin-bottom: 16px;
+    }
+    .sprite-wrap { position: relative; display: inline-block; }
+    .sprite-wrap svg { display: block; }
+
+    /* floating XP / PR text */
+    .float-txt {
+      position: absolute;
+      font-family: 'Press Start 2P', monospace;
+      font-size: .55rem; pointer-events: none;
+      animation: floatUp 1.6s ease forwards;
+      z-index: 20; white-space: nowrap;
+    }
+    @keyframes floatUp {
+      0%   { opacity: 1; transform: translateY(0)   scale(1);   }
+      100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+    }
+    .svg-flash { animation: svgFlash .65s ease; }
+    @keyframes svgFlash {
+      0%,100% { filter: drop-shadow(0 0 8px rgba(0,229,255,.35)); }
+      50%     { filter: drop-shadow(0 0 32px rgba(255,215,0,1)) brightness(1.6); }
+    }
+
+    .hero-bars  { margin-top: 16px; text-align: left; }
+    .hero-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-top: 14px;
+    }
+    .hero-stat-tile {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 9px;
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border);
+    }
+    .sp-pill {
+      margin-top: 14px; padding: 8px 12px;
+      background: rgba(255,215,0,.06);
+      border: 1px solid rgba(255,215,0,.18);
+      font-family: 'Press Start 2P', monospace;
+      font-size: .42rem; color: var(--gold);
+      text-align: center;
+    }
+
+    /* ── battle log ── */
+    .log-feed {
+      max-height: 270px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .log-feed::-webkit-scrollbar { width: 3px; }
+    .log-feed::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .log-entry {
+      font-size: .7rem; padding: 8px 12px;
+      background: rgba(255,255,255,.02);
+      border-left: 2px solid var(--dim);
+      line-height: 1.55;
+      animation: slideIn .3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .log-entry.pr      { border-left-color: var(--gold); }
+    .log-entry.levelup { border-left-color: var(--accent); background: rgba(0,229,255,.04); }
+    .log-time { font-size: .5rem; color: var(--dim); margin-bottom: 2px; }
+    .log-msg b { color: var(--accent); }
+    .log-entry.pr .log-msg b      { color: var(--gold); }
+    .log-entry.levelup .log-msg b { color: var(--accent); }
+
+    /* ── PR board ── */
+    .pr-list {
+      display: flex; flex-direction: column; gap: 5px;
+      max-height: 220px; overflow-y: auto;
+    }
+    .pr-list::-webkit-scrollbar { width: 3px; }
+    .pr-list::-webkit-scrollbar-thumb { background: var(--border); }
+    .pr-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 11px;
+      background: rgba(255,215,0,.04);
+      border: 1px solid rgba(255,215,0,.1);
+    }
+    .pr-ex  { font-size: .7rem; font-weight: 700; color: var(--accent); }
+    .pr-wt  { font-family: 'Press Start 2P', monospace; font-size: .45rem; color: var(--gold); }
+
+    @media (max-width: 820px) {
+      .train-layout { grid-template-columns: 1fr; }
+      .form-grid    { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- nav injected by JS -->
+<div id="navMount"></div>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>⚔ TRAINING GROUND</h1>
+    <p>Log your real workouts. Every rep and every set powers your hero.</p>
+  </div>
+
+  <div class="train-layout">
+
+    <!-- ── LEFT: form + log ── -->
+    <div class="left-col">
+
+      <div class="card gold">
+        <div class="card-title">▸ LOG A WORKOUT</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Exercise</label>
+            <input id="inExercise" type="text" placeholder="e.g. Bench Press"
+                   list="exList" autocomplete="off">
+            <datalist id="exList"></datalist>
+          </div>
+          <div class="field">
+            <label>Weight (lbs)</label>
+            <input id="inWeight" type="number" placeholder="135" min="0" step="2.5">
+          </div>
+          <div class="field">
+            <label>Sets</label>
+            <input id="inSets" type="number" placeholder="3" min="1" max="30">
+          </div>
+          <div class="field">
+            <label>Reps</label>
+            <input id="inReps" type="number" placeholder="10" min="1">
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%"
+                onclick="doTrain()">⚔ COMPLETE TRAINING</button>
+      </div>
+
+      <div class="card fire">
+        <div class="card-title">▸ SESSION LOG</div>
+        <div class="log-feed" id="logFeed">
+          <div class="log-entry">
+            <div class="log-time">READY</div>
+            <div class="log-msg">Hero stands ready. Log your first workout!</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left-col -->
+
+    <!-- ── RIGHT: hero + PRs ── -->
+    <div class="right-col">
+
+      <div class="card accent hero-card">
+        <div class="hero-name"  id="heroName">HERO</div>
+        <div class="hero-class" id="heroClass">NOVICE LIFTER</div>
+        <div class="lvl-badge"  id="heroBadge">LVL 1</div>
+        <div class="sprite-wrap" id="spriteWrap">
+          <div id="heroSvg"></div>
+        </div>
+        <div class="hero-bars">
+          <div class="bar-wrap">
+            <div class="bar-label">
+              <span style="color:var(--hp)">❤ HP</span>
+              <span style="color:var(--dim)" id="hpTxt">100/100</span>
+            </div>
+            <div class="bar-track bar-hp">
+              <div class="bar-fill" id="hpBar" style="width:100%"></div>
+            </div>
+          </div>
+          <div class="bar-wrap" style="margin-bottom:0">
+            <div class="bar-label">
+              <span style="color:var(--xp)">⚡ XP</span>
+              <span style="color:var(--dim)" id="xpTxt">0/100</span>
+            </div>
+            <div class="bar-track bar-xp">
+              <div class="bar-fill" id="xpBar" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-stats" id="heroStats"></div>
+        <div class="sp-pill" id="spPill">✦ 0 SKILL POINTS</div>
+      </div>
+
+      <div class="card xp">
+        <div class="card-title">▸ PERSONAL RECORDS</div>
+        <div class="pr-list" id="prList">
+          <div class="empty-state">No PRs yet — start training!</div>
+        </div>
+      </div>
+
+    </div><!-- /right-col -->
+
+  </div><!-- /train-layout -->
+</div><!-- /page -->
+
+<!-- achievement toast -->
+<div class="ach-popup" id="achPopup">
+  <div class="ach-label">🏆 ACHIEVEMENT UNLOCKED</div>
+  <div class="ach-title" id="achTitle"></div>
+  <div class="ach-desc"  id="achDesc"></div>
+</div>
+
+<script>
+// ── boot ──
+document.getElementById('sharedStyles').textContent = SHARED_CSS;
+document.getElementById('navMount').innerHTML       = navHTML('index.html');
+
+let G = loadState();
+rebuildSkillBonuses(G);
+
+// ── render hero card ──
+function render() {
+  const h        = G.hero;
+  const l        = h.level;
+  const xpNeeded = l < MAX_LEVEL ? XP_PER_LEVEL[l] : 9999;
+
+  document.getElementById('heroName').textContent  = h.name;
+  document.getElementById('heroClass').textContent = CLASS_NAMES[Math.min(l-1, CLASS_NAMES.length-1)];
+  document.getElementById('heroBadge').textContent = 'LVL ' + l;
+
+  document.getElementById('hpTxt').textContent  = h.hp  + '/' + h.maxHp;
+  document.getElementById('xpTxt').textContent  = h.xp  + '/' + xpNeeded;
+  document.getElementById('hpBar').style.width  = Math.min(h.hp / h.maxHp * 100, 100) + '%';
+  document.getElementById('xpBar').style.width  = Math.min(h.xp / xpNeeded * 100, 100) + '%';
+  document.getElementById('spPill').textContent = '✦ ' + h.skillPoints + ' SKILL POINT' + (h.skillPoints !== 1 ? 'S' : '');
+
+  document.getElementById('heroSvg').innerHTML = buildCharSVG(l, 130, 170);
+
+  // stat tiles
+  document.getElementById('heroStats').innerHTML = [
+    ['💪','STR','var(--str)', h.str],
+    ['🛡','END','var(--end)', h.end],
+    ['⚡','AGI','var(--agi)', h.agi],
+    ['🔥','PWR','var(--pow)', h.pow],
+  ].map(([ic, nm, cl, v]) => `
+    <div class="hero-stat-tile">
+      <span>${ic}</span>
+      <span style="font-size:.6rem;color:var(--dim);text-transform:uppercase">${nm}</span>
+      <span style="font-family:'Press Start 2P',monospace;font-size:.42rem;color:${cl};margin-left:auto">${v}</span>
+    </div>`).join('');
+
+  // navSP
+  const navSP = document.getElementById('navSP');
+  if (navSP) navSP.textContent = '✦ ' + h.skillPoints + ' SP';
+
+  // PR board
+  const prList = document.getElementById('prList');
+  const prs    = Object.entries(G.prs);
+  if (prs.length === 0) {
+    prList.innerHTML = '<div class="empty-state">No PRs yet — start training!</div>';
+  } else {
+    prList.innerHTML = prs
+      .sort((a, b) => b[1].weight - a[1].weight)
+      .map(([ex, pr]) => `
+        <div class="pr-row">
+          <span class="pr-ex">${ex}</span>
+          <span class="pr-wt">★ ${pr.weight} lbs</span>
+        </div>`).join('');
+  }
+
+  // datalist
+  const userEx = [...new Set(G.workouts.map(w => w.exercise))];
+  const allEx  = [...new Set([...userEx, ...commonExercises()])];
+  document.getElementById('exList').innerHTML = allEx.map(e => `<option value="${e}">`).join('');
+}
+
+// ── floating animation ──
+function spawnFloat(text, color, offsetX) {
+  const wrap = document.getElementById('spriteWrap');
+  if (!wrap) return;
+  const el = document.createElement('div');
+  el.className   = 'float-txt';
+  el.textContent = text;
+  el.style.color = color;
+  el.style.left  = `calc(50% + ${offsetX || 0}px)`;
+  el.style.top   = '10px';
+  el.style.transform = 'translateX(-50%)';
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 1700);
+}
+
+function flashSVG() {
+  const svg = document.querySelector('#heroSvg svg');
+  if (!svg) return;
+  svg.classList.add('svg-flash');
+  setTimeout(() => svg.classList.remove('svg-flash'), 700);
+}
+
+// ── add to session log ──
+function addLog(msg, cls) {
+  const feed  = document.getElementById('logFeed');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + (cls || '');
+  const now = new Date();
+  entry.innerHTML = `
+    <div class="log-time">${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+    <div class="log-msg">${msg}</div>`;
+  feed.insertBefore(entry, feed.firstChild);
+}
+
+// ── main training action ──
+function doTrain() {
+  const exercise = document.getElementById('inExercise').value.trim();
+  const weight   = parseFloat(document.getElementById('inWeight').value)  || 0;
+  const sets     = parseInt(document.getElementById('inSets').value)      || 1;
+  const reps     = parseInt(document.getElementById('inReps').value)      || 1;
+
+  if (!exercise) {
+    const el = document.getElementById('inExercise');
+    el.style.borderColor = 'var(--red)';
+    setTimeout(() => el.style.borderColor = '', 900);
+    return;
+  }
+
+  const sb         = G.skillBonuses;
+  const xpGained   = calcXP(weight, sets, reps, exercise, sb);
+  const statGains  = getStatGains(exercise, weight, sets, reps, sb);
+  const prKey      = exercise.toLowerCase();
+  const isPR       = weight > 0 && (!G.prs[prKey] || weight > G.prs[prKey].weight);
+  if (isPR) G.prs[prKey] = { weight, reps, date: new Date().toLocaleDateString() };
+
+  const h       = G.hero;
+  h.str        += statGains.str;
+  h.end        += statGains.end;
+  h.agi        += statGains.agi;
+  h.pow        += statGains.pow;
+  h.xp         += xpGained;
+  h.totalXP    += xpGained;
+  h.hp          = Math.min(h.maxHp, h.hp + sets * (sb.hpPerSet || 5));
+
+  const leveledUp = applyLevelUps(G);
+
+  G.workouts.unshift({
+    id:       Date.now(),
+    exercise, weight, sets, reps,
+    xpGained, statGains, isPR,
+    date: new Date().toLocaleDateString(),
+    time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+  });
+
+  saveState(G);
+
+  // clear inputs
+  ['inExercise','inWeight','inSets','inReps'].forEach(id => document.getElementById(id).value = '');
+
+  // animations
+  spawnFloat('+' + xpGained + ' XP', 'var(--xp)');
+  if (isPR)      spawnFloat('★ NEW PR!', 'var(--gold)', 36);
+  if (leveledUp) {
+    spawnFloat('LEVEL UP!', 'var(--accent)', -36);
+    flashSVG();
+    showAch('LEVEL ' + h.level + ' REACHED', 'You are now a ' + CLASS_NAMES[h.level - 1] + '!');
+    if (h.skillPoints > 0)
+      setTimeout(() => showAch('SKILL POINT EARNED!', 'Visit the Skills page to unlock new abilities.'), 4400);
+  }
+
+  // log entry
+  let msg = `<b>${exercise.toUpperCase()}</b>`;
+  if (weight > 0) msg += ` — ${weight} lbs`;
+  msg += ` ${sets}×${reps}`;
+  msg += ` | <span style="color:var(--xp)">+${xpGained} XP</span>`;
+  msg += ` | 💪${statGains.str} 🛡${statGains.end} ⚡${statGains.agi} 🔥${statGains.pow}`;
+  if (isPR && weight > 0) msg += ` | <span style="color:var(--gold)">★ PR!</span>`;
+  if (leveledUp)          msg += ` | <b style="color:var(--accent)">⬆ LVL UP!</b>`;
+  addLog(msg, leveledUp ? 'levelup' : isPR ? 'pr' : '');
+
+  render();
+}
+
+// Enter key submits
+document.querySelectorAll('input').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') doTrain(); });
+});
+
+// ── init ──
+render();
+</script>
+</body>
+</html>

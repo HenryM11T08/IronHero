@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRON HERO — Skills</title>
+  <script src="game.js"></script>
+  <style id="sharedStyles"></style>
+  <style>
+
+    /* ── skill point banner ── */
+    .sp-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px;
+      background: rgba(255,215,0,.07);
+      border: 1px solid rgba(255,215,0,.25);
+      padding: 12px 18px;
+      margin-bottom: 24px;
+    }
+    .sp-banner-count {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .65rem; color: var(--gold);
+    }
+    .sp-banner-hint { font-size: .68rem; color: var(--dim); }
+
+    /* ── 2-column tree grid ── */
+    .trees-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    /* ── individual tree card ── */
+    .tree-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 20px;
+    }
+    .tree-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 18px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tree-icon { font-size: 1.6rem; }
+    .tree-name {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .55rem;
+    }
+    .tree-desc { font-size: .65rem; color: var(--dim); margin-top: 4px; }
+
+    /* ── connector line between nodes ── */
+    .connector {
+      width: 2px; height: 14px;
+      background: var(--border);
+      margin: 0 auto 0 24px;
+    }
+    .connector.active { background: rgba(255,215,0,.4); }
+
+    /* ── skill node ── */
+    .skill-node {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      transition: border-color .2s, background .2s;
+    }
+
+    /* states */
+    .skill-node.unlocked {
+      border-color: rgba(255,215,0,.4);
+      background: rgba(255,215,0,.04);
+    }
+    .skill-node.available {
+      border-color: rgba(0,229,255,.3);
+      cursor: pointer;
+    }
+    .skill-node.available:hover {
+      background: rgba(0,229,255,.06);
+      border-color: var(--accent);
+    }
+    .skill-node.locked { opacity: .35; }
+
+    /* node contents */
+    .skill-node-icon  { font-size: 1.6rem; min-width: 34px; text-align: center; margin-top: 2px; }
+    .skill-node-body  { flex: 1; }
+    .skill-node-name  {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .47rem; color: var(--white); margin-bottom: 5px;
+    }
+    .skill-node.unlocked .skill-node-name { color: var(--gold); }
+    .skill-node-desc   { font-size: .65rem; color: var(--dim); line-height: 1.45; }
+    .skill-node-effect { font-size: .62rem; color: var(--accent); margin-top: 4px; font-style: italic; }
+    .skill-node-cost   {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .4rem; color: var(--dim); margin-top: 6px;
+    }
+    .skill-node.available .skill-node-cost { color: var(--gold); }
+    .skill-node.unlocked  .skill-node-cost { color: var(--hp); }
+
+    .btn-unlock {
+      background: var(--accent); color: #000; border: none;
+      font-family: 'Press Start 2P', monospace; font-size: .42rem;
+      padding: 5px 12px; cursor: pointer; margin-top: 8px;
+      transition: opacity .15s;
+    }
+    .btn-unlock:hover { opacity: .85; }
+
+    .locked-hint {
+      font-size: .5rem; color: var(--dim);
+      margin-top: 6px; font-style: italic;
+    }
+
+    @media (max-width: 760px) { .trees-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<div id="navMount"></div>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>🌳 SKILL TREES</h1>
+    <p>Spend skill points to unlock permanent passive abilities.
+       Earn 1 point per level-up, plus bonus points from boss kills.</p>
+  </div>
+
+  <!-- mini hero widget -->
+  <div id="miniCharMount"></div>
+
+  <!-- SP banner -->
+  <div class="sp-banner">
+    <div class="sp-banner-count" id="spCount">✦ 0 SKILL POINTS AVAILABLE</div>
+    <div class="sp-banner-hint">Each skill requires the one before it in the chain.</div>
+  </div>
+
+  <!-- trees grid -->
+  <div class="trees-grid" id="treesGrid"></div>
+
+</div><!-- /page -->
+
+<div class="ach-popup" id="achPopup">
+  <div class="ach-label">✨ SKILL UNLOCKED</div>
+  <div class="ach-title" id="achTitle"></div>
+  <div class="ach-desc"  id="achDesc"></div>
+</div>
+
+<script>
+// ── boot ──
+document.getElementById('sharedStyles').textContent    = SHARED_CSS;
+document.getElementById('navMount').innerHTML          = navHTML('skills.html');
+document.getElementById('miniCharMount').innerHTML     = miniCharHTML();
+
+let G = loadState();
+rebuildSkillBonuses(G);
+renderMiniChar(G);
+
+// ── render all four trees ──
+function renderTrees() {
+  const pts = G.hero.skillPoints;
+
+  document.getElementById('spCount').textContent =
+    '✦ ' + pts + ' SKILL POINT' + (pts !== 1 ? 'S' : '') + ' AVAILABLE';
+
+  const grid = document.getElementById('treesGrid');
+  grid.innerHTML = '';
+
+  SKILL_TREES.forEach(tree => {
+    const card = document.createElement('div');
+    card.className = 'tree-card';
+    card.style.borderTop = '2px solid ' + tree.color;
+
+    // header
+    let html = `
+      <div class="tree-header">
+        <div class="tree-icon">${tree.icon}</div>
+        <div>
+          <div class="tree-name" style="color:${tree.color}">${tree.name}</div>
+          <div class="tree-desc">${tree.desc}</div>
+        </div>
+      </div>`;
+
+    // skill nodes
+    tree.skills.forEach((sk, i) => {
+      const unlocked  = G.unlockedSkills.includes(sk.id);
+      const reqOk     = !sk.req || G.unlockedSkills.includes(sk.req);
+      const canAfford = pts >= sk.cost;
+      const avail     = !unlocked && reqOk;
+      const cls = 'skill-node' + (unlocked ? ' unlocked' : avail ? ' available' : ' locked');
+
+      // connector between nodes
+      if (i > 0) {
+        const prevUnlocked = G.unlockedSkills.includes(tree.skills[i - 1].id);
+        html += `<div class="connector${prevUnlocked ? ' active' : ''}"></div>`;
+      }
+
+      // unlock button / status
+      let footer = '';
+      if (unlocked) {
+        footer = '<div class="skill-node-cost">✓ UNLOCKED</div>';
+      } else if (avail && canAfford) {
+        footer = `
+          <div class="skill-node-cost">Cost: ${sk.cost} SP</div>
+          <button class="btn-unlock" onclick="doUnlock('${sk.id}')">
+            UNLOCK (${sk.cost} SP)
+          </button>`;
+      } else if (avail && !canAfford) {
+        footer = `<div class="skill-node-cost">Cost: ${sk.cost} SP — not enough points</div>`;
+      } else {
+        footer = `
+          <div class="skill-node-cost">Cost: ${sk.cost} SP</div>
+          <div class="locked-hint">🔒 Unlock "${tree.skills[i-1].name}" first</div>`;
+      }
+
+      html += `
+        <div class="${cls}">
+          <div class="skill-node-icon">${sk.icon}</div>
+          <div class="skill-node-body">
+            <div class="skill-node-name">${sk.name}</div>
+            <div class="skill-node-desc">${sk.desc}</div>
+            <div class="skill-node-effect">${sk.effect}</div>
+            ${footer}
+          </div>
+        </div>`;
+    });
+
+    card.innerHTML = html;
+    grid.appendChild(card);
+  });
+}
+
+// ── unlock a skill ──
+function doUnlock(skillId) {
+  const hero = G.hero;
+  if (hero.skillPoints < 1) {
+    showAch('NO SKILL POINTS', 'Level up or defeat bosses to earn more!');
+    return;
+  }
+  if (G.unlockedSkills.includes(skillId)) return;
+
+  let sk = null, reqMet = true;
+  SKILL_TREES.forEach(tree => {
+    const s = tree.skills.find(x => x.id === skillId);
+    if (s) {
+      sk = s;
+      if (s.req && !G.unlockedSkills.includes(s.req)) reqMet = false;
+    }
+  });
+
+  if (!reqMet) {
+    showAch('SKILL LOCKED', 'Unlock the previous skill in this tree first.');
+    return;
+  }
+
+  G.unlockedSkills.push(skillId);
+  hero.skillPoints--;
+  rebuildSkillBonuses(G);
+  saveState(G);
+
+  renderMiniChar(G);
+  renderTrees();
+  showAch('SKILL UNLOCKED', sk ? sk.name + ' — ' + sk.effect : 'New power gained!');
+}
+
+// ── init ──
+renderTrees();
+</script>
+</body>
+</html>

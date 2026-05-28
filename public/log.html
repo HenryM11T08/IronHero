@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRON HERO — Log</title>
+  <script src="game.js"></script>
+  <style id="sharedStyles"></style>
+  <style>
+
+    /* ── summary strip ── */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .stat-tile {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-tile-val {
+      font-family: 'Press Start 2P', monospace;
+      font-size: .8rem;
+      margin-bottom: 6px;
+    }
+    .stat-tile-label {
+      font-size: .6rem; color: var(--dim);
+      text-transform: uppercase; letter-spacing: .1em;
+    }
+
+    /* ── PR grid ── */
+    .pr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 10px;
+    }
+    .pr-tile {
+      background: var(--panel2);
+      border: 1px solid rgba(255,215,0,.15);
+      padding: 11px 13px;
+    }
+    .pr-tile-ex  { font-size: .7rem; font-weight: 700; color: var(--accent); margin-bottom: 5px; }
+    .pr-tile-wt  { font-family: 'Press Start 2P', monospace; font-size: .5rem; color: var(--gold); }
+    .pr-tile-sub { font-size: .6rem; color: var(--dim); margin-top: 3px; }
+
+    /* ── log controls ── */
+    .log-controls {
+      display: flex; align-items: center;
+      gap: 10px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .search-box {
+      flex: 1; min-width: 180px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'Exo 2', sans-serif;
+      font-size: .82rem; padding: 8px 12px;
+      outline: none; transition: border-color .2s;
+    }
+    .search-box:focus { border-color: var(--accent); }
+    .search-box::placeholder { color: var(--dim); }
+
+    /* ── history table extras ── */
+    .ex-cell  { font-weight: 700; color: var(--accent); }
+    .wt-cell  { font-family: 'Press Start 2P', monospace; font-size: .5rem; color: var(--gold); }
+    .pr-badge { font-family: 'Press Start 2P', monospace; font-size: .42rem; color: var(--gold); }
+    .del-btn  {
+      background: none; border: none;
+      color: var(--border); cursor: pointer;
+      font-size: .85rem; padding: 2px 6px;
+      transition: color .15s;
+    }
+    .del-btn:hover { color: var(--red); }
+
+    @media (max-width: 700px) {
+      .stats-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="navMount"></div>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>📜 WORKOUT LOG</h1>
+    <p>Your full training history — every session, every PR, every stat gain tracked.</p>
+  </div>
+
+  <!-- mini hero widget -->
+  <div id="miniCharMount"></div>
+
+  <!-- ── summary strip ── -->
+  <div class="stats-strip" id="statsStrip"></div>
+
+  <!-- ── personal records ── -->
+  <div class="card xp" style="margin-bottom:20px;">
+    <div class="card-title">▸ PERSONAL RECORDS</div>
+    <div class="pr-grid" id="prGrid">
+      <div class="empty-state">No PRs yet. Log a weighted exercise to set one.</div>
+    </div>
+  </div>
+
+  <!-- ── full history ── -->
+  <div class="card accent">
+    <div class="card-title">▸ ALL SESSIONS</div>
+    <div class="log-controls">
+      <input
+        class="search-box"
+        id="searchBox"
+        type="text"
+        placeholder="Filter by exercise name..."
+        oninput="renderHistory()">
+      <button class="btn btn-danger" onclick="clearAll()">🗑 CLEAR ALL</button>
+    </div>
+    <div id="historyWrap">
+      <div class="empty-state">No workouts yet — head to the Train page!</div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<div class="ach-popup" id="achPopup">
+  <div class="ach-label">ℹ INFO</div>
+  <div class="ach-title" id="achTitle"></div>
+  <div class="ach-desc"  id="achDesc"></div>
+</div>
+
+<script>
+// ── boot ──
+document.getElementById('sharedStyles').textContent  = SHARED_CSS;
+document.getElementById('navMount').innerHTML        = navHTML('log.html');
+document.getElementById('miniCharMount').innerHTML   = miniCharHTML();
+
+let G = loadState();
+rebuildSkillBonuses(G);
+renderMiniChar(G);
+
+// ─────────────────────────────────────────
+//  SUMMARY STRIP
+// ─────────────────────────────────────────
+function renderStatsStrip() {
+  const w = G.workouts;
+  const tiles = [
+    { val: w.length,                                  label: 'Sessions',   color: 'var(--accent)' },
+    { val: w.reduce((a, x) => a + x.sets, 0),        label: 'Total Sets', color: 'var(--str)'    },
+    { val: Object.keys(G.prs).length,                 label: 'PRs Set',    color: 'var(--gold)'   },
+    { val: (G.hero.totalXP || 0).toLocaleString(),   label: 'Total XP',   color: 'var(--xp)'     },
+  ];
+
+  document.getElementById('statsStrip').innerHTML = tiles.map(t => `
+    <div class="stat-tile" style="border-top:2px solid ${t.color}">
+      <div class="stat-tile-val" style="color:${t.color}">${t.val}</div>
+      <div class="stat-tile-label">${t.label}</div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────
+//  PERSONAL RECORDS
+// ─────────────────────────────────────────
+function renderPRs() {
+  const grid = document.getElementById('prGrid');
+  const prs  = Object.entries(G.prs);
+
+  if (prs.length === 0) {
+    grid.innerHTML = '<div class="empty-state">No PRs yet. Log a weighted exercise.</div>';
+    return;
+  }
+
+  grid.innerHTML = prs
+    .sort((a, b) => b[1].weight - a[1].weight)
+    .map(([ex, pr]) => `
+      <div class="pr-tile">
+        <div class="pr-tile-ex">${ex}</div>
+        <div class="pr-tile-wt">★ ${pr.weight} lbs</div>
+        <div class="pr-tile-sub">${pr.reps} reps · ${pr.date}</div>
+      </div>`).join('');
+}
+
+// ─────────────────────────────────────────
+//  HISTORY TABLE
+// ─────────────────────────────────────────
+function renderHistory() {
+  const wrap   = document.getElementById('historyWrap');
+  const filter = (document.getElementById('searchBox').value || '').toLowerCase().trim();
+  let   rows   = G.workouts;
+
+  if (filter) rows = rows.filter(w => w.exercise.toLowerCase().includes(filter));
+
+  if (rows.length === 0) {
+    wrap.innerHTML = filter
+      ? `<div class="empty-state">No workouts match "${filter}"</div>`
+      : `<div class="empty-state">No workouts yet — head to the Train page!</div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Exercise</th>
+          <th>Weight</th>
+          <th>Volume</th>
+          <th>XP</th>
+          <th>Gains</th>
+          <th>PR</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(w => `
+          <tr>
+            <td class="ex-cell">${w.exercise}</td>
+            <td class="wt-cell">${w.weight > 0 ? w.weight + ' lbs' : '—'}</td>
+            <td>${w.sets} × ${w.reps}</td>
+            <td><span style="color:var(--xp);font-size:.62rem">+${w.xpGained}</span></td>
+            <td style="font-size:.62rem;color:var(--dim)">
+              💪${w.statGains.str}
+              🛡${w.statGains.end}
+              ⚡${w.statGains.agi}
+              🔥${w.statGains.pow}
+            </td>
+            <td>${w.isPR && w.weight > 0 ? '<span class="pr-badge">★ PR</span>' : ''}</td>
+            <td style="font-size:.62rem;color:var(--dim)">${w.date} ${w.time || ''}</td>
+            <td>
+              <button class="del-btn" onclick="delWorkout(${w.id})" title="Delete">✕</button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ─────────────────────────────────────────
+//  ACTIONS
+// ─────────────────────────────────────────
+function delWorkout(id) {
+  G.workouts = G.workouts.filter(w => w.id !== id);
+  saveState(G);
+  renderStatsStrip();
+  renderPRs();
+  renderHistory();
+}
+
+function clearAll() {
+  if (!confirm('Delete ALL workout history? This cannot be undone.')) return;
+  G.workouts = [];
+  G.prs      = {};
+  saveState(G);
+  renderStatsStrip();
+  renderPRs();
+  renderHistory();
+}
+
+// ── init ──
+renderStatsStrip();
+renderPRs();
+renderHistory();
+</script>
+</body>
+</html>
