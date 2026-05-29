@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRON HERO — Achievements</title>
+  <script src="game.js"></script>
+  <style id="sharedStyles"></style>
+  <style>
+    .ach-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
+    .ach-tile { display:flex; align-items:flex-start; gap:14px; padding:14px 16px; background:var(--panel); border:1px solid var(--border); transition:border-color .2s; }
+    .ach-tile.earned { border-color:rgba(255,215,0,.4); background:rgba(255,215,0,.04); }
+    .ach-tile.locked { opacity:.38; }
+    .ach-icon { font-size:2rem; min-width:36px; text-align:center; }
+    .ach-body { flex:1; }
+    .ach-name { font-family:'Press Start 2P',monospace; font-size:.47rem; color:var(--white); margin-bottom:5px; }
+    .ach-tile.earned .ach-name { color:var(--gold); }
+    .ach-desc { font-size:.65rem; color:var(--dim); line-height:1.4; }
+    .ach-badge { font-family:'Press Start 2P',monospace; font-size:.36rem; margin-top:6px; padding:2px 7px; display:inline-block; }
+    .ach-tile.earned .ach-badge { background:var(--gold); color:#000; }
+    .ach-tile.locked .ach-badge { background:var(--border); color:var(--dim); }
+    .summary-bar { display:flex; align-items:center; gap:20px; background:var(--panel); border:1px solid var(--border); padding:14px 20px; margin-bottom:22px; flex-wrap:wrap; }
+    .summary-count { font-family:'Press Start 2P',monospace; font-size:.65rem; color:var(--gold); }
+    .progress-bar-wrap { flex:1; min-width:200px; }
+    .progress-label { font-size:.55rem; color:var(--dim); margin-bottom:5px; }
+    .progress-track { height:10px; background:rgba(255,255,255,.04); border:1px solid var(--border); overflow:hidden; }
+    .progress-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--fire)); transition:width .8s; }
+    .section-label { font-family:'Press Start 2P',monospace; font-size:.45rem; color:var(--dim); letter-spacing:.15em; text-transform:uppercase; margin:22px 0 10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  </style>
+</head>
+<body>
+<div id="navMount"></div>
+<div class="page">
+  <div class="page-header">
+    <h1>🏆 ACHIEVEMENTS</h1>
+    <p>Milestones earned through real training. Every badge represents real work.</p>
+  </div>
+  <div id="miniCharMount"></div>
+  <div class="summary-bar">
+    <div class="summary-count" id="achCount">0 / 0 EARNED</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-label" id="achPct">0%</div>
+      <div class="progress-track"><div class="progress-fill" id="achProgressBar" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div id="achContent"></div>
+</div>
+<div class="ach-popup" id="achPopup">
+  <div class="ach-label">🏆 ACHIEVEMENT</div>
+  <div class="ach-title" id="achTitle"></div>
+  <div class="ach-desc"  id="achDesc"></div>
+</div>
+<script>
+document.getElementById('sharedStyles').textContent  = SHARED_CSS;
+document.getElementById('navMount').innerHTML        = navHTML('achievements.html');
+document.getElementById('miniCharMount').innerHTML   = miniCharHTML();
+
+let G = loadState();
+rebuildSkillBonuses(G);
+renderMiniChar(G);
+
+const CATEGORIES = [
+  {label:'TRAINING',    ids:['first_session','sessions_10','sessions_50','sessions_100']},
+  {label:'STREAKS',     ids:['streak_3','streak_7','streak_30']},
+  {label:'LEVELING',    ids:['level_5','level_10']},
+  {label:'RECORDS',     ids:['first_pr','prs_10']},
+  {label:'HEAVY LIFTS', ids:['bench_225','squat_315','deadlift_405']},
+  {label:'BOSS FIGHTS', ids:['first_boss','all_bosses']},
+  {label:'SKILLS',      ids:['first_skill','all_skills']},
+  {label:'XP',          ids:['xp_1000','xp_10000']},
+  {label:'MISC',        ids:['named_hero','logged_weight']},
+];
+
+function render() {
+  const earned=G.achievements, total=ACHIEVEMENT_DEFS.length, count=earned.length;
+  const pct=Math.round(count/total*100);
+  document.getElementById('achCount').textContent=count+' / '+total+' EARNED';
+  document.getElementById('achPct').textContent=pct+'% complete';
+  document.getElementById('achProgressBar').style.width=pct+'%';
+  const content=document.getElementById('achContent');
+  content.innerHTML='';
+  CATEGORIES.forEach(cat=>{
+    const defs=cat.ids.map(id=>ACHIEVEMENT_DEFS.find(d=>d.id===id)).filter(Boolean);
+    if(!defs.length) return;
+    const label=document.createElement('div');
+    label.className='section-label'; label.textContent='▸ '+cat.label;
+    content.appendChild(label);
+    const grid=document.createElement('div'); grid.className='ach-grid';
+    defs.forEach(def=>{
+      const isEarned=earned.includes(def.id);
+      const tile=document.createElement('div');
+      tile.className='ach-tile '+(isEarned?'earned':'locked');
+      tile.innerHTML=`<div class="ach-icon">${def.icon}</div><div class="ach-body"><div class="ach-name">${def.name}</div><div class="ach-desc">${def.desc}</div><div class="ach-badge">${isEarned?'✓ EARNED':'🔒 LOCKED'}</div></div>`;
+      grid.appendChild(tile);
+    });
+    content.appendChild(grid);
+  });
+}
+render();
+</script>
+</body>
+</html>

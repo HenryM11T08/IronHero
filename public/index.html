@@ -7,282 +7,134 @@
   <script src="game.js"></script>
   <style id="sharedStyles"></style>
   <style>
-
-    /* ── page layout ── */
-    .train-layout {
-      display: grid;
-      grid-template-columns: 1fr 360px;
-      gap: 24px;
-      align-items: start;
-    }
-    .left-col  { display: flex; flex-direction: column; gap: 18px; }
-    .right-col { display: flex; flex-direction: column; gap: 18px; }
-
-    /* ── session name bar ── */
-    .session-bar {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 18px;
-    }
-    .session-bar .field { flex: 1; }
-    .session-date {
-      font-family: 'Press Start 2P', monospace;
-      font-size: .42rem; color: var(--dim);
-      white-space: nowrap;
-    }
-
-    /* ── exercise rows table ── */
-    .ex-table-wrap { overflow-x: auto; margin-bottom: 14px; }
-    .ex-table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 700px;
-    }
-    .ex-table th {
-      font-size: .48rem; color: var(--dim);
-      letter-spacing: .12em; text-transform: uppercase;
-      padding: 8px 12px; border-bottom: 1px solid var(--border);
-      font-weight: 400; text-align: left;
-    }
-    .ex-row td { padding: 5px 6px; vertical-align: middle; }
-    .ex-row td input {
-      background: rgba(255,255,255,.05);
-      border: 1px solid var(--border);
-      color: var(--white);
-      font-family: 'Exo 2', sans-serif;
-      font-size: 1rem;
-      font-weight: 600;
-      padding: 9px 12px;
-      outline: none;
-      width: 100%;
-      transition: border-color .15s, box-shadow .15s;
-    }
-    .ex-row td input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(0,229,255,.12);
-    }
-    .ex-row td input.error { border-color: var(--red); }
-    /* number inputs — big and readable */
-    .ex-row td input[type="number"] {
-      font-family: 'Press Start 2P', monospace;
-      font-size: .75rem;
-      text-align: center;
-      padding: 9px 6px;
-    }
-    .ex-row td.col-ex    { min-width: 220px; }
-    .ex-row td.col-num   { width: 110px; min-width: 100px; }
-    .ex-row td.col-note  { min-width: 130px; }
-    .ex-row td.col-del   { width: 44px; text-align: center; }
-
-    .row-num {
-      font-family: 'Press Start 2P', monospace;
-      font-size: .38rem; color: var(--dim);
-      padding: 0 8px;
-    }
-
-    /* stat preview pill on each row */
-    .row-preview {
-      font-size: .6rem; color: var(--dim);
-      padding: 4px 8px;
-      white-space: nowrap;
-      min-width: 180px;
-    }
-    .row-preview span { margin-right: 7px; }
-
-    .del-row-btn {
-      background: none; border: none;
-      color: var(--border); cursor: pointer;
-      font-size: 1rem; line-height: 1;
-      transition: color .15s; padding: 4px;
-    }
-    .del-row-btn:hover { color: var(--red); }
-
-    /* ── add row + submit row ── */
-    .form-actions {
-      display: flex; gap: 10px; align-items: center;
-      flex-wrap: wrap;
-    }
-    .btn-add-row {
-      background: rgba(0,229,255,.08);
-      border: 1px dashed rgba(0,229,255,.3);
-      color: var(--accent);
-      font-family: 'Press Start 2P', monospace;
-      font-size: .42rem; padding: 10px 16px;
-      cursor: pointer; transition: all .15s;
-    }
-    .btn-add-row:hover {
-      background: rgba(0,229,255,.14);
-      border-color: var(--accent);
-    }
-    .session-xp-preview {
-      margin-left: auto;
-      font-family: 'Press Start 2P', monospace;
-      font-size: .42rem; color: var(--xp);
-      background: rgba(170,0,255,.08);
-      border: 1px solid rgba(170,0,255,.2);
-      padding: 8px 14px;
-    }
-
-    /* ── hero card ── */
-    .hero-card { text-align: center; padding: 22px 18px; }
-    .hero-name {
-      font-family: 'Press Start 2P', monospace;
-      font-size: .65rem; color: var(--gold); margin-bottom: 4px;
-    }
-    .hero-class {
-      font-size: .6rem; color: var(--dim);
-      letter-spacing: .12em; margin-bottom: 10px;
-    }
-    .lvl-badge {
-      display: inline-block;
-      font-family: 'Press Start 2P', monospace;
-      font-size: .48rem; background: var(--gold);
-      color: #000; padding: 3px 9px; margin-bottom: 14px;
-    }
-    .sprite-wrap { position: relative; display: inline-block; }
-    .sprite-wrap svg { display: block; }
-    .float-txt {
-      position: absolute;
-      font-family: 'Press Start 2P', monospace;
-      font-size: .52rem; pointer-events: none;
-      animation: floatUp 1.6s ease forwards;
-      z-index: 20; white-space: nowrap;
-    }
-    @keyframes floatUp {
-      0%   { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-65px) scale(1.3); }
-    }
-    .svg-flash { animation: svgFlash .65s ease; }
-    @keyframes svgFlash {
-      0%,100% { filter: drop-shadow(0 0 8px rgba(0,229,255,.35)); }
-      50%     { filter: drop-shadow(0 0 32px rgba(255,215,0,1)) brightness(1.6); }
-    }
-    .hero-bars  { margin-top: 14px; text-align: left; }
-    .hero-stats {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 7px; margin-top: 12px;
-    }
-    .hero-stat-tile {
-      display: flex; align-items: center; gap: 6px;
-      padding: 6px 9px;
-      background: rgba(255,255,255,.02);
-      border: 1px solid var(--border);
-    }
-    .sp-pill {
-      margin-top: 12px; padding: 7px 10px;
-      background: rgba(255,215,0,.06);
-      border: 1px solid rgba(255,215,0,.18);
-      font-family: 'Press Start 2P', monospace;
-      font-size: .4rem; color: var(--gold);
-      text-align: center;
-    }
-
-    /* ── session log ── */
-    .log-feed {
-      max-height: 280px; overflow-y: auto;
-      display: flex; flex-direction: column; gap: 5px;
-    }
-    .log-feed::-webkit-scrollbar { width: 3px; }
-    .log-feed::-webkit-scrollbar-thumb { background: var(--border); }
-    .log-entry {
-      font-size: .68rem; padding: 8px 12px;
-      background: rgba(255,255,255,.02);
-      border-left: 2px solid var(--dim);
-      line-height: 1.6; animation: slideIn .3s ease;
-    }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(-6px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-    .log-entry.pr      { border-left-color: var(--gold); }
-    .log-entry.levelup { border-left-color: var(--accent); background: rgba(0,229,255,.04); }
-    .log-entry.session { border-left-color: var(--fire); background: rgba(255,109,0,.04); }
-    .log-time { font-size: .48rem; color: var(--dim); margin-bottom: 2px; }
-    .log-msg b { color: var(--accent); }
-    .log-entry.pr      .log-msg b { color: var(--gold); }
-    .log-entry.levelup .log-msg b { color: var(--accent); }
-    .log-entry.session .log-msg b { color: var(--fire); }
-
-    /* ── PR board ── */
-    .pr-list {
-      display: flex; flex-direction: column; gap: 5px;
-      max-height: 200px; overflow-y: auto;
-    }
-    .pr-list::-webkit-scrollbar { width: 3px; }
-    .pr-list::-webkit-scrollbar-thumb { background: var(--border); }
-    .pr-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 7px 11px;
-      background: rgba(255,215,0,.04);
-      border: 1px solid rgba(255,215,0,.1);
-    }
-    .pr-ex { font-size: .7rem; font-weight: 700; color: var(--accent); }
-    .pr-wt { font-family: 'Press Start 2P', monospace; font-size: .45rem; color: var(--gold); }
-
-    @media (max-width: 860px) {
-      .train-layout { grid-template-columns: 1fr; }
-    }
+    .train-layout { display:grid; grid-template-columns:1fr 370px; gap:22px; align-items:start; }
+    .left-col  { display:flex; flex-direction:column; gap:18px; }
+    .right-col { display:flex; flex-direction:column; gap:18px; }
+    .hero-name-wrap { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+    .hero-name-input { font-family:'Press Start 2P',monospace; font-size:.6rem; color:var(--gold); background:transparent; border:none; border-bottom:1px dashed rgba(255,215,0,.3); outline:none; width:140px; padding:2px 4px; }
+    .hero-name-input:focus { border-bottom-color:var(--gold); }
+    .edit-name-btn { background:none; border:none; color:var(--dim); cursor:pointer; font-size:.75rem; transition:color .15s; }
+    .edit-name-btn:hover { color:var(--gold); }
+    .session-bar { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    .session-bar .field { flex:1; }
+    .session-date { font-family:'Press Start 2P',monospace; font-size:.4rem; color:var(--dim); white-space:nowrap; }
+    .template-row { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:16px; }
+    .tpl-btn { background:rgba(255,255,255,.03); border:1px solid var(--border); color:var(--dim); font-family:'Press Start 2P',monospace; font-size:.36rem; padding:6px 10px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+    .tpl-btn:hover { border-color:var(--accent); color:var(--white); }
+    .tpl-btn.user-tpl { border-color:rgba(170,0,255,.3); color:var(--xp); }
+    .tpl-btn.user-tpl:hover { border-color:var(--xp); }
+    .ex-table-wrap { overflow-x:auto; margin-bottom:14px; }
+    .ex-table { width:100%; border-collapse:collapse; min-width:680px; }
+    .ex-table th { font-size:.46rem; color:var(--dim); letter-spacing:.1em; text-transform:uppercase; padding:8px 10px; border-bottom:1px solid var(--border); font-weight:400; text-align:left; }
+    .ex-row td { padding:5px 5px; vertical-align:middle; }
+    .ex-row td input { background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--white); font-family:'Exo 2',sans-serif; font-size:1rem; font-weight:600; padding:9px 10px; outline:none; width:100%; transition:border-color .15s,box-shadow .15s; }
+    .ex-row td input:focus { border-color:var(--accent); box-shadow:0 0 0 2px rgba(0,229,255,.1); }
+    .ex-row td input[type="number"] { font-family:'Press Start 2P',monospace; font-size:.72rem; text-align:center; padding:9px 4px; }
+    .ex-row td input.error { border-color:var(--red); }
+    .ex-row td.col-ex { min-width:210px; } .ex-row td.col-num { width:105px; min-width:95px; }
+    .ex-row td.col-note { min-width:120px; } .ex-row td.col-del { width:42px; text-align:center; }
+    .row-num { font-family:'Press Start 2P',monospace; font-size:.36rem; color:var(--dim); padding:0 8px; }
+    .row-preview { font-size:.58rem; color:var(--dim); padding:4px 6px; white-space:nowrap; min-width:175px; }
+    .del-row-btn { background:none; border:none; color:var(--border); cursor:pointer; font-size:1rem; transition:color .15s; padding:4px; }
+    .del-row-btn:hover { color:var(--red); }
+    .form-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .btn-add-row { background:rgba(0,229,255,.07); border:1px dashed rgba(0,229,255,.3); color:var(--accent); font-family:'Press Start 2P',monospace; font-size:.4rem; padding:10px 14px; cursor:pointer; transition:all .15s; }
+    .btn-add-row:hover { background:rgba(0,229,255,.13); border-color:var(--accent); }
+    .btn-save-tpl { background:rgba(170,0,255,.07); border:1px dashed rgba(170,0,255,.3); color:var(--xp); font-family:'Press Start 2P',monospace; font-size:.4rem; padding:10px 14px; cursor:pointer; transition:all .15s; }
+    .btn-save-tpl:hover { background:rgba(170,0,255,.13); border-color:var(--xp); }
+    .xp-preview { margin-left:auto; font-family:'Press Start 2P',monospace; font-size:.4rem; color:var(--xp); background:rgba(170,0,255,.07); border:1px solid rgba(170,0,255,.2); padding:8px 12px; }
+    .rest-timer-card { padding:16px 20px; }
+    .rest-timer-display { font-family:'Press Start 2P',monospace; font-size:1.4rem; color:var(--accent); text-align:center; margin:10px 0; letter-spacing:.1em; }
+    .rest-btns { display:flex; gap:7px; flex-wrap:wrap; justify-content:center; }
+    .rest-btn { background:var(--panel2); border:1px solid var(--border); color:var(--white); font-family:'Press Start 2P',monospace; font-size:.38rem; padding:7px 12px; cursor:pointer; transition:all .15s; }
+    .rest-btn:hover { border-color:var(--accent); }
+    .rest-btn.active { border-color:var(--accent); background:rgba(0,229,255,.1); color:var(--accent); }
+    .hero-card { text-align:center; padding:22px 18px; }
+    .hero-class { font-size:.6rem; color:var(--dim); letter-spacing:.12em; margin-bottom:10px; }
+    .lvl-badge { display:inline-block; font-family:'Press Start 2P',monospace; font-size:.48rem; background:var(--gold); color:#000; padding:3px 9px; margin-bottom:14px; }
+    .sprite-wrap { position:relative; display:inline-block; }
+    .float-txt { position:absolute; font-family:'Press Start 2P',monospace; font-size:.52rem; pointer-events:none; animation:floatUp 1.6s ease forwards; z-index:20; white-space:nowrap; }
+    @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1);} 100%{opacity:0;transform:translateY(-65px) scale(1.3);} }
+    .svg-flash { animation:svgFlash .65s ease; }
+    @keyframes svgFlash { 0%,100%{filter:drop-shadow(0 0 8px rgba(0,229,255,.35));} 50%{filter:drop-shadow(0 0 32px rgba(255,215,0,1)) brightness(1.6);} }
+    .hero-bars { margin-top:14px; text-align:left; }
+    .hero-stats { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:12px; }
+    .hero-stat-tile { display:flex; align-items:center; gap:6px; padding:6px 9px; background:rgba(255,255,255,.02); border:1px solid var(--border); }
+    .sp-pill { margin-top:12px; padding:7px 10px; background:rgba(255,215,0,.06); border:1px solid rgba(255,215,0,.18); font-family:'Press Start 2P',monospace; font-size:.4rem; color:var(--gold); text-align:center; }
+    .log-feed { max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; }
+    .log-feed::-webkit-scrollbar { width:3px; } .log-feed::-webkit-scrollbar-thumb { background:var(--border); }
+    .log-entry { font-size:.68rem; padding:8px 12px; background:rgba(255,255,255,.02); border-left:2px solid var(--dim); line-height:1.6; animation:slideIn .3s ease; }
+    @keyframes slideIn { from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);} }
+    .log-entry.pr { border-left-color:var(--gold); }
+    .log-entry.levelup { border-left-color:var(--accent); background:rgba(0,229,255,.04); }
+    .log-entry.session { border-left-color:var(--fire); background:rgba(255,109,0,.04); }
+    .log-time { font-size:.48rem; color:var(--dim); margin-bottom:2px; }
+    .log-msg b { color:var(--accent); }
+    .log-entry.pr .log-msg b { color:var(--gold); }
+    .log-entry.session .log-msg b { color:var(--fire); }
+    .pr-list { display:flex; flex-direction:column; gap:5px; max-height:190px; overflow-y:auto; }
+    .pr-list::-webkit-scrollbar { width:3px; } .pr-list::-webkit-scrollbar-thumb { background:var(--border); }
+    .pr-row { display:flex; justify-content:space-between; align-items:center; padding:7px 11px; background:rgba(255,215,0,.04); border:1px solid rgba(255,215,0,.1); }
+    .pr-ex { font-size:.7rem; font-weight:700; color:var(--accent); }
+    .pr-wt { font-family:'Press Start 2P',monospace; font-size:.45rem; color:var(--gold); }
+    @media(max-width:860px) { .train-layout{grid-template-columns:1fr;} }
   </style>
 </head>
 <body>
-
 <div id="navMount"></div>
-
 <div class="page">
-
   <div class="page-header">
     <h1>⚔ TRAINING GROUND</h1>
-    <p>Build your full workout session — add every exercise, then submit it all at once to power up your hero.</p>
+    <p>Build your full session — add every exercise, then submit it all at once to power up your hero.</p>
   </div>
-
   <div class="train-layout">
-
-    <!-- ══ LEFT: session builder + log ══ -->
     <div class="left-col">
-
       <div class="card gold">
-        <div class="card-title">▸ TODAY'S SESSION</div>
-
-        <!-- session name + date -->
+        <div class="card-title">▸ QUICK START — TEMPLATES</div>
+        <div class="template-row" id="templateRow"></div>
         <div class="session-bar">
           <div class="field">
-            <label>Session Name (optional)</label>
+            <label>Session Name</label>
             <input id="sessionName" type="text" placeholder="e.g. Push Day, Leg Day...">
           </div>
           <div class="session-date" id="sessionDate"></div>
         </div>
-
-        <!-- exercise rows -->
         <div class="ex-table-wrap">
           <table class="ex-table">
-            <thead>
-              <tr>
-                <th style="width:36px">#</th>
-                <th class="col-ex">Exercise</th>
-                <th class="col-num" style="text-align:center">Weight<br><span style="font-size:.36rem;opacity:.5">(lbs)</span></th>
-                <th class="col-num" style="text-align:center">Sets</th>
-                <th class="col-num" style="text-align:center">Reps</th>
-                <th class="col-note">Notes</th>
-                <th style="min-width:190px">Preview</th>
-                <th class="col-del"></th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th style="width:34px">#</th>
+              <th class="col-ex">Exercise</th>
+              <th class="col-num" style="text-align:center">Weight<br><span style="font-size:.35rem;opacity:.5">(lbs)</span></th>
+              <th class="col-num" style="text-align:center">Sets</th>
+              <th class="col-num" style="text-align:center">Reps</th>
+              <th class="col-note">Notes</th>
+              <th style="min-width:180px">Preview</th>
+              <th class="col-del"></th>
+            </tr></thead>
             <tbody id="exRows"></tbody>
           </table>
         </div>
-
-        <!-- add row + submit -->
         <div class="form-actions">
-          <button class="btn-add-row" onclick="addRow()">+ ADD EXERCISE</button>
-          <div class="session-xp-preview" id="xpPreview">⚡ 0 XP</div>
-          <button class="btn btn-primary" onclick="submitSession()"
-                  style="padding:10px 20px;font-size:.52rem;">
-            ⚔ COMPLETE SESSION
-          </button>
+          <button class="btn-add-row"  onclick="addRow()">+ ADD EXERCISE</button>
+          <button class="btn-save-tpl" onclick="saveAsTemplate()">💾 SAVE AS TEMPLATE</button>
+          <div class="xp-preview" id="xpPreview">⚡ 0 XP</div>
+          <button class="btn btn-primary" onclick="submitSession()" style="padding:10px 20px;font-size:.5rem;">⚔ COMPLETE SESSION</button>
         </div>
+      </div>
 
-      </div><!-- /card -->
+      <div class="card end rest-timer-card">
+        <div class="card-title">▸ REST TIMER</div>
+        <div class="rest-timer-display" id="restTimerDisplay">—</div>
+        <div class="rest-btns">
+          <button class="rest-btn" onclick="setRest(30)">30s</button>
+          <button class="rest-btn" onclick="setRest(60)">1 min</button>
+          <button class="rest-btn" onclick="setRest(90)">90s</button>
+          <button class="rest-btn" onclick="setRest(120)">2 min</button>
+          <button class="rest-btn" onclick="setRest(180)">3 min</button>
+          <button class="rest-btn" onclick="clearRestTimer()" style="color:var(--red);border-color:rgba(255,23,68,.3)">✕ STOP</button>
+        </div>
+      </div>
 
-      <!-- session log -->
       <div class="card fire">
         <div class="card-title">▸ SESSION LOG</div>
         <div class="log-feed" id="logFeed">
@@ -292,408 +144,274 @@
           </div>
         </div>
       </div>
+    </div>
 
-    </div><!-- /left-col -->
-
-    <!-- ══ RIGHT: hero card + PRs ══ -->
     <div class="right-col">
-
       <div class="card accent hero-card">
-        <div class="hero-name"  id="heroName">HERO</div>
-        <div class="hero-class" id="heroClass">NOVICE LIFTER</div>
-        <div class="lvl-badge"  id="heroBadge">LVL 1</div>
-        <div class="sprite-wrap" id="spriteWrap">
-          <div id="heroSvg"></div>
+        <div class="hero-name-wrap">
+          <input class="hero-name-input" id="heroNameInput" type="text" maxlength="16" placeholder="HERO">
+          <button class="edit-name-btn" onclick="saveName()" title="Save name">✓</button>
         </div>
+        <div class="hero-class" id="heroClass">NOVICE LIFTER</div>
+        <div class="lvl-badge" id="heroBadge">LVL 1</div>
+        <div class="sprite-wrap" id="spriteWrap"><div id="heroSvg"></div></div>
         <div class="hero-bars">
           <div class="bar-wrap">
-            <div class="bar-label">
-              <span style="color:var(--hp)">❤ HP</span>
-              <span style="color:var(--dim)" id="hpTxt">100/100</span>
-            </div>
-            <div class="bar-track bar-hp">
-              <div class="bar-fill" id="hpBar" style="width:100%"></div>
-            </div>
+            <div class="bar-label"><span style="color:var(--hp)">❤ HP</span><span style="color:var(--dim)" id="hpTxt">100/100</span></div>
+            <div class="bar-track bar-hp"><div class="bar-fill" id="hpBar" style="width:100%"></div></div>
           </div>
           <div class="bar-wrap" style="margin-bottom:0">
-            <div class="bar-label">
-              <span style="color:var(--xp)">⚡ XP</span>
-              <span style="color:var(--dim)" id="xpTxt">0/100</span>
-            </div>
-            <div class="bar-track bar-xp">
-              <div class="bar-fill" id="xpBar" style="width:0%"></div>
-            </div>
+            <div class="bar-label"><span style="color:var(--xp)">⚡ XP</span><span style="color:var(--dim)" id="xpTxt">0/100</span></div>
+            <div class="bar-track bar-xp"><div class="bar-fill" id="xpBar" style="width:0%"></div></div>
           </div>
         </div>
         <div class="hero-stats" id="heroStats"></div>
         <div class="sp-pill" id="spPill">✦ 0 SKILL POINTS</div>
       </div>
-
       <div class="card xp">
         <div class="card-title">▸ PERSONAL RECORDS</div>
-        <div class="pr-list" id="prList">
-          <div class="empty-state">No PRs yet — start training!</div>
-        </div>
+        <div class="pr-list" id="prList"><div class="empty-state">No PRs yet!</div></div>
       </div>
-
-    </div><!-- /right-col -->
-
-  </div><!-- /train-layout -->
-</div><!-- /page -->
+    </div>
+  </div>
+</div>
 
 <div class="ach-popup" id="achPopup">
-  <div class="ach-label">🏆 ACHIEVEMENT UNLOCKED</div>
+  <div class="ach-label">🏆 ACHIEVEMENT</div>
   <div class="ach-title" id="achTitle"></div>
   <div class="ach-desc"  id="achDesc"></div>
 </div>
-
-<!-- hidden datalist shared by all exercise inputs -->
 <datalist id="exList"></datalist>
 
 <script>
-// ── boot ──
 document.getElementById('sharedStyles').textContent = SHARED_CSS;
 document.getElementById('navMount').innerHTML       = navHTML('index.html');
 document.getElementById('sessionDate').textContent  =
-  new Date().toLocaleDateString([], { weekday:'long', month:'long', day:'numeric' });
+  new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
 
-let G    = loadState();
+let G = loadState();
 rebuildSkillBonuses(G);
-
-// ── row counter ──
 let rowCount = 0;
 
-// ─────────────────────────────────────────
-//  ADD A NEW EXERCISE ROW
-// ─────────────────────────────────────────
-function addRow() {
+function setRest(secs) {
+  document.querySelectorAll('.rest-btn').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  startRestTimer(secs, ()=>{
+    showAch('REST DONE!','Time to get back to work.','⏱');
+    document.querySelectorAll('.rest-btn').forEach(b=>b.classList.remove('active'));
+  });
+}
+
+function saveName() {
+  const val = document.getElementById('heroNameInput').value.trim();
+  if (!val) return;
+  G.hero.name = val.toUpperCase();
+  const unlocked = checkAchievements(G);
+  saveState(G);
+  unlocked.forEach(a=>showAch(a.name,a.desc,a.icon));
+  render();
+}
+document.getElementById('heroNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveName();});
+
+function renderTemplates() {
+  const row = document.getElementById('templateRow');
+  const all = [...BUILT_IN_TEMPLATES,...G.templates];
+  row.innerHTML = all.map(t=>
+    `<button class="tpl-btn${G.templates.find(x=>x.id===t.id)?' user-tpl':''}" onclick="loadTemplate('${t.id}')">${t.icon||'📋'} ${t.name}</button>`
+  ).join('') + (G.templates.length>0
+    ? `<button class="tpl-btn" style="color:var(--red);border-color:rgba(255,23,68,.2)" onclick="clearUserTemplates()">🗑 CLEAR MINE</button>`
+    : '');
+}
+
+function loadTemplate(id) {
+  const tpl = [...BUILT_IN_TEMPLATES,...G.templates].find(t=>t.id===id);
+  if (!tpl) return;
+  document.getElementById('exRows').innerHTML='';
+  document.getElementById('sessionName').value=tpl.name;
+  rowCount=0;
+  tpl.exercises.forEach(ex=>addRowWithData(ex));
+}
+
+function saveAsTemplate() {
+  const rows=document.querySelectorAll('.ex-row');
+  if(!rows.length){showAch('NO EXERCISES','Add exercises first.','⚠️');return;}
+  const name=document.getElementById('sessionName').value.trim()||('MY TEMPLATE '+(G.templates.length+1));
+  const exercises=[];
+  rows.forEach(tr=>{
+    const inputs=tr.querySelectorAll('input');
+    const exercise=inputs[0].value.trim(); if(!exercise) return;
+    exercises.push({exercise,weight:parseFloat(inputs[1].value)||0,sets:parseInt(inputs[2].value)||3,reps:parseInt(inputs[3].value)||10});
+  });
+  if(!exercises.length) return;
+  G.templates.push({id:'user_'+Date.now(),name:name.toUpperCase(),icon:'📋',exercises});
+  saveState(G); renderTemplates();
+  showAch('TEMPLATE SAVED',name.toUpperCase(),'💾');
+}
+
+function clearUserTemplates() {
+  if(!confirm('Delete all your saved templates?')) return;
+  G.templates=[]; saveState(G); renderTemplates();
+}
+
+function addRow() { addRowWithData({}); }
+
+function addRowWithData(data) {
   rowCount++;
-  const tbody = document.getElementById('exRows');
-  const tr    = document.createElement('tr');
-  tr.className  = 'ex-row';
-  tr.dataset.id = rowCount;
-
-  tr.innerHTML = `
+  const tbody=document.getElementById('exRows');
+  const tr=document.createElement('tr');
+  tr.className='ex-row'; tr.dataset.id=rowCount;
+  tr.innerHTML=`
     <td><span class="row-num">${rowCount}</span></td>
-    <td class="col-ex">
-      <input type="text" list="exList" placeholder="Exercise name"
-             autocomplete="off"
-             oninput="updatePreview(${rowCount})"
-             onchange="updatePreview(${rowCount})">
-    </td>
-    <td class="col-num">
-      <input type="number" placeholder="lbs" min="0" step="2.5"
-             oninput="updatePreview(${rowCount})">
-    </td>
-    <td class="col-num">
-      <input type="number" placeholder="3" min="1" max="30" value="3"
-             oninput="updatePreview(${rowCount})">
-    </td>
-    <td class="col-num">
-      <input type="number" placeholder="10" min="1" value="10"
-             oninput="updatePreview(${rowCount})">
-    </td>
-    <td class="col-note">
-      <input type="text" placeholder="Optional note...">
-    </td>
-    <td>
-      <div class="row-preview" id="preview-${rowCount}">—</div>
-    </td>
-    <td class="col-del">
-      <button class="del-row-btn" onclick="removeRow(${rowCount})" title="Remove">✕</button>
-    </td>`;
-
+    <td class="col-ex"><input type="text" list="exList" placeholder="Exercise name" autocomplete="off" value="${data.exercise||''}" oninput="updatePreview(${rowCount})" onchange="updatePreview(${rowCount})"></td>
+    <td class="col-num"><input type="number" placeholder="lbs" min="0" step="2.5" value="${data.weight||''}" oninput="updatePreview(${rowCount})"></td>
+    <td class="col-num"><input type="number" placeholder="3" min="1" max="30" value="${data.sets||3}" oninput="updatePreview(${rowCount})"></td>
+    <td class="col-num"><input type="number" placeholder="10" min="1" value="${data.reps||10}" oninput="updatePreview(${rowCount})"></td>
+    <td class="col-note"><input type="text" placeholder="Optional note..." value="${data.note||''}"></td>
+    <td><div class="row-preview" id="preview-${rowCount}">—</div></td>
+    <td class="col-del"><button class="del-row-btn" onclick="removeRow(${rowCount})">✕</button></td>`;
   tbody.appendChild(tr);
-
-  // focus the exercise input on the new row
-  tr.querySelector('input[type="text"]').focus();
+  if(data.exercise) updatePreview(rowCount);
+  else tr.querySelector('input[type="text"]').focus();
   updateTotalXP();
 }
 
-// ─────────────────────────────────────────
-//  REMOVE A ROW
-// ─────────────────────────────────────────
 function removeRow(id) {
-  const tr = document.querySelector(`tr[data-id="${id}"]`);
-  if (tr) tr.remove();
-  renumberRows();
-  updateTotalXP();
+  const tr=document.querySelector(`tr[data-id="${id}"]`); if(tr) tr.remove();
+  renumberRows(); updateTotalXP();
 }
 
 function renumberRows() {
-  document.querySelectorAll('.ex-row').forEach((tr, i) => {
-    const num = tr.querySelector('.row-num');
-    if (num) num.textContent = i + 1;
-  });
+  document.querySelectorAll('.ex-row').forEach((tr,i)=>{const n=tr.querySelector('.row-num');if(n)n.textContent=i+1;});
 }
 
-// ─────────────────────────────────────────
-//  LIVE STAT PREVIEW PER ROW
-// ─────────────────────────────────────────
 function updatePreview(id) {
-  const tr      = document.querySelector(`tr[data-id="${id}"]`);
-  if (!tr) return;
-  const inputs  = tr.querySelectorAll('input');
-  const exercise = inputs[0].value.trim();
-  const weight   = parseFloat(inputs[1].value) || 0;
-  const sets     = parseInt(inputs[2].value)   || 1;
-  const reps     = parseInt(inputs[3].value)   || 1;
-
-  const preview  = document.getElementById('preview-' + id);
-  if (!preview) return;
-
-  if (!exercise) { preview.innerHTML = '—'; updateTotalXP(); return; }
-
-  const sb     = G.skillBonuses;
-  const gains  = getStatGains(exercise, weight, sets, reps, sb);
-  const xp     = calcXP(weight, sets, reps, exercise, sb);
-
-  preview.innerHTML =
-    `<span style="color:var(--xp)">+${xp} XP</span> ` +
-    `<span style="color:var(--str)">💪${gains.str}</span> ` +
-    `<span style="color:var(--end)">🛡${gains.end}</span> ` +
-    `<span style="color:var(--agi)">⚡${gains.agi}</span> ` +
-    `<span style="color:var(--pow)">🔥${gains.pow}</span>`;
-
+  const tr=document.querySelector(`tr[data-id="${id}"]`); if(!tr) return;
+  const inputs=tr.querySelectorAll('input');
+  const exercise=inputs[0].value.trim(), weight=parseFloat(inputs[1].value)||0;
+  const sets=parseInt(inputs[2].value)||1, reps=parseInt(inputs[3].value)||1;
+  const el=document.getElementById('preview-'+id); if(!el) return;
+  if(!exercise){el.innerHTML='—';updateTotalXP();return;}
+  const sb=G.skillBonuses;
+  const gains=getStatGains(exercise,weight,sets,reps,sb), xp=calcXP(weight,sets,reps,exercise,sb);
+  el.innerHTML=`<span style="color:var(--xp)">+${xp} XP</span> <span style="color:var(--str)">💪${gains.str}</span> <span style="color:var(--end)">🛡${gains.end}</span> <span style="color:var(--agi)">⚡${gains.agi}</span> <span style="color:var(--pow)">🔥${gains.pow}</span>`;
   updateTotalXP();
 }
 
-// ─────────────────────────────────────────
-//  TOTAL XP PREVIEW
-// ─────────────────────────────────────────
 function updateTotalXP() {
-  let total = 0;
-  document.querySelectorAll('.ex-row').forEach(tr => {
-    const inputs   = tr.querySelectorAll('input');
-    const exercise = inputs[0].value.trim();
-    const weight   = parseFloat(inputs[1].value) || 0;
-    const sets     = parseInt(inputs[2].value)   || 1;
-    const reps     = parseInt(inputs[3].value)   || 1;
-    if (exercise) total += calcXP(weight, sets, reps, exercise, G.skillBonuses);
+  let total=0;
+  document.querySelectorAll('.ex-row').forEach(tr=>{
+    const inputs=tr.querySelectorAll('input'), ex=inputs[0].value.trim(); if(!ex) return;
+    total+=calcXP(parseFloat(inputs[1].value)||0,parseInt(inputs[2].value)||1,parseInt(inputs[3].value)||1,ex,G.skillBonuses);
   });
-  document.getElementById('xpPreview').textContent = '⚡ ' + total + ' XP';
+  document.getElementById('xpPreview').textContent='⚡ '+total+' XP';
 }
 
-// ─────────────────────────────────────────
-//  SUBMIT FULL SESSION
-// ─────────────────────────────────────────
 function submitSession() {
-  const rows = document.querySelectorAll('.ex-row');
-  if (rows.length === 0) {
-    showAch('NO EXERCISES', 'Add at least one exercise first!');
-    return;
-  }
+  const rows=document.querySelectorAll('.ex-row');
+  if(!rows.length){showAch('NO EXERCISES','Add at least one exercise first!','⚠️');return;}
+  const exercises=[]; let hasError=false;
+  rows.forEach(tr=>{
+    const inputs=tr.querySelectorAll('input'), exercise=inputs[0].value.trim();
+    if(!exercise){inputs[0].classList.add('error');setTimeout(()=>inputs[0].classList.remove('error'),900);hasError=true;return;}
+    exercises.push({exercise,weight:parseFloat(inputs[1].value)||0,sets:parseInt(inputs[2].value)||1,reps:parseInt(inputs[3].value)||1,note:inputs[4].value.trim()});
+  });
+  if(hasError) return;
 
-  // collect and validate
-  const exercises = [];
-  let hasError    = false;
+  const sb=G.skillBonuses;
+  const sessionName=document.getElementById('sessionName').value.trim()||'Training Session';
+  const dateStr=new Date().toLocaleDateString(), timeStr=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  let totalXP=0,totalStr=0,totalEnd=0,totalAgi=0,totalPow=0,newPRs=[],anyLevelUp=false;
 
-  rows.forEach(tr => {
-    const inputs   = tr.querySelectorAll('input');
-    const exercise = inputs[0].value.trim();
-    const weight   = parseFloat(inputs[1].value) || 0;
-    const sets     = parseInt(inputs[2].value)   || 1;
-    const reps     = parseInt(inputs[3].value)   || 1;
-    const note     = inputs[4].value.trim();
+  updateStreak(G);
 
-    if (!exercise) {
-      inputs[0].classList.add('error');
-      setTimeout(() => inputs[0].classList.remove('error'), 1000);
-      hasError = true;
-      return;
-    }
-    exercises.push({ exercise, weight, sets, reps, note });
+  exercises.forEach(({exercise,weight,sets,reps,note})=>{
+    const xpGained=calcXP(weight,sets,reps,exercise,sb), statGains=getStatGains(exercise,weight,sets,reps,sb);
+    const prKey=exercise.toLowerCase(), isPR=weight>0&&(!G.prs[prKey]||weight>G.prs[prKey].weight);
+    if(isPR){G.prs[prKey]={weight,reps,date:dateStr};newPRs.push(exercise);}
+    const h=G.hero;
+    h.str+=statGains.str;h.end+=statGains.end;h.agi+=statGains.agi;h.pow+=statGains.pow;
+    h.xp+=xpGained;h.totalXP+=xpGained;
+    h.hp=Math.min(h.maxHp,h.hp+sets*(sb.hpPerSet||5));
+    totalXP+=xpGained;totalStr+=statGains.str;totalEnd+=statGains.end;totalAgi+=statGains.agi;totalPow+=statGains.pow;
+    if(applyLevelUps(G)) anyLevelUp=true;
+    G.workouts.unshift({id:Date.now()+Math.random(),exercise,weight,sets,reps,xpGained,statGains,isPR,note,sessionName,date:dateStr,time:timeStr});
   });
 
-  if (hasError) return;
-
-  // process every exercise
-  const sb          = G.skillBonuses;
-  const sessionName = document.getElementById('sessionName').value.trim() || 'Training Session';
-  const now         = new Date();
-  const dateStr     = now.toLocaleDateString();
-  const timeStr     = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-
-  let totalXP      = 0;
-  let totalStr     = 0, totalEnd = 0, totalAgi = 0, totalPow = 0;
-  let newPRs       = [];
-  let anyLevelUp   = false;
-
-  exercises.forEach(({ exercise, weight, sets, reps, note }) => {
-    const xpGained  = calcXP(weight, sets, reps, exercise, sb);
-    const statGains = getStatGains(exercise, weight, sets, reps, sb);
-    const prKey     = exercise.toLowerCase();
-    const isPR      = weight > 0 && (!G.prs[prKey] || weight > G.prs[prKey].weight);
-
-    if (isPR) {
-      G.prs[prKey] = { weight, reps, date: dateStr };
-      newPRs.push(exercise);
-    }
-
-    const h   = G.hero;
-    h.str    += statGains.str;
-    h.end    += statGains.end;
-    h.agi    += statGains.agi;
-    h.pow    += statGains.pow;
-    h.xp     += xpGained;
-    h.totalXP+= xpGained;
-    h.hp      = Math.min(h.maxHp, h.hp + sets * (sb.hpPerSet || 5));
-
-    totalXP  += xpGained;
-    totalStr += statGains.str;
-    totalEnd += statGains.end;
-    totalAgi += statGains.agi;
-    totalPow += statGains.pow;
-
-    const leveledUp = applyLevelUps(G);
-    if (leveledUp) anyLevelUp = true;
-
-    G.workouts.unshift({
-      id: Date.now() + Math.random(),
-      exercise, weight, sets, reps,
-      xpGained, statGains, isPR,
-      note, sessionName,
-      date: dateStr, time: timeStr,
-    });
-  });
-
+  const newAch=checkAchievements(G);
   saveState(G);
 
-  // ── session summary log entry ──
-  let summary = `<b>${sessionName.toUpperCase()}</b> — ${exercises.length} exercise${exercises.length > 1 ? 's' : ''}`;
-  summary    += ` | <span style="color:var(--xp)">+${totalXP} XP</span>`;
-  summary    += ` | 💪${totalStr} 🛡${totalEnd} ⚡${totalAgi} 🔥${totalPow}`;
-  if (newPRs.length)  summary += ` | <span style="color:var(--gold)">★ ${newPRs.length} PR${newPRs.length > 1 ? 's' : ''}!</span>`;
-  if (anyLevelUp)     summary += ` | <b style="color:var(--accent)">⬆ LEVEL UP!</b>`;
-  addLog(summary, 'session');
+  let summary=`<b>${sessionName.toUpperCase()}</b> — ${exercises.length} exercise${exercises.length>1?'s':''}`;
+  summary+=` | <span style="color:var(--xp)">+${totalXP} XP</span>`;
+  summary+=` | 💪${totalStr} 🛡${totalEnd} ⚡${totalAgi} 🔥${totalPow}`;
+  if(newPRs.length) summary+=` | <span style="color:var(--gold)">★ ${newPRs.length} PR${newPRs.length>1?'s':''}!</span>`;
+  if(anyLevelUp) summary+=` | <b style="color:var(--accent)">⬆ LVL UP!</b>`;
+  addLog(summary,'session');
 
-  // individual exercise log entries
-  exercises.forEach(({ exercise, weight, sets, reps }) => {
-    const xp     = calcXP(weight, sets, reps, exercise, sb);
-    const gains  = getStatGains(exercise, weight, sets, reps, sb);
-    const isPR   = newPRs.includes(exercise);
-    let   msg    = `&nbsp;&nbsp;↳ <b>${exercise}</b>`;
-    if (weight > 0) msg += ` ${weight}lbs`;
-    msg += ` ${sets}×${reps}`;
-    msg += ` <span style="color:var(--xp)">+${xp} XP</span>`;
-    if (isPR) msg += ` <span style="color:var(--gold)">★ PR</span>`;
-    addLog(msg, isPR ? 'pr' : '');
+  exercises.forEach(({exercise,weight,sets,reps})=>{
+    const xp=calcXP(weight,sets,reps,exercise,sb),gains=getStatGains(exercise,weight,sets,reps,sb);
+    let msg=`&nbsp;&nbsp;↳ <b>${exercise}</b>`;
+    if(weight>0) msg+=` ${weight}lbs`; msg+=` ${sets}×${reps} <span style="color:var(--xp)">+${xp} XP</span>`;
+    if(newPRs.includes(exercise)) msg+=` <span style="color:var(--gold)">★ PR</span>`;
+    addLog(msg,newPRs.includes(exercise)?'pr':'');
   });
 
-  // ── animations ──
-  spawnFloat('+' + totalXP + ' XP', 'var(--xp)');
-  if (newPRs.length) spawnFloat('★ ' + newPRs.length + ' PR' + (newPRs.length > 1 ? 's' : '') + '!', 'var(--gold)', 40);
-  if (anyLevelUp) {
-    spawnFloat('LEVEL UP!', 'var(--accent)', -40);
-    flashSVG();
-    showAch('LEVEL ' + G.hero.level + ' REACHED', 'You are now a ' + CLASS_NAMES[G.hero.level - 1] + '!');
-    if (G.hero.skillPoints > 0)
-      setTimeout(() => showAch('SKILL POINT!', 'Visit the Skills page to unlock new abilities.'), 4400);
+  spawnFloat('+'+totalXP+' XP','var(--xp)');
+  if(newPRs.length) spawnFloat('★ '+newPRs.length+' PR'+(newPRs.length>1?'s':'')+'!','var(--gold)',42);
+  if(anyLevelUp){
+    spawnFloat('LEVEL UP!','var(--accent)',-42);flashSVG();
+    showAch('LEVEL '+G.hero.level+' REACHED','You are now a '+CLASS_NAMES[G.hero.level-1]+'!','⬆');
+    if(G.hero.skillPoints>0) setTimeout(()=>showAch('SKILL POINT!','Visit the Skills page.','✨'),4000);
   }
+  newAch.forEach(a=>setTimeout(()=>showAch(a.name,a.desc,a.icon),600));
 
   render();
-
-  // ── reset form ──
-  document.getElementById('exRows').innerHTML = '';
-  document.getElementById('sessionName').value = '';
-  document.getElementById('xpPreview').textContent = '⚡ 0 XP';
-  rowCount = 0;
-  addRow(); // start fresh with one empty row
+  document.getElementById('exRows').innerHTML='';
+  document.getElementById('sessionName').value='';
+  document.getElementById('xpPreview').textContent='⚡ 0 XP';
+  rowCount=0; addRow(); addRow(); addRow();
 }
 
-// ─────────────────────────────────────────
-//  ANIMATIONS
-// ─────────────────────────────────────────
-function spawnFloat(text, color, offsetX) {
-  const wrap = document.getElementById('spriteWrap');
-  if (!wrap) return;
-  const el = document.createElement('div');
-  el.className   = 'float-txt';
-  el.textContent = text;
-  el.style.color = color;
-  el.style.left  = `calc(50% + ${offsetX || 0}px)`;
-  el.style.top   = '10px';
-  el.style.transform = 'translateX(-50%)';
-  wrap.appendChild(el);
-  setTimeout(() => el.remove(), 1700);
+function spawnFloat(text,color,ox) {
+  const wrap=document.getElementById('spriteWrap'); if(!wrap) return;
+  const el=document.createElement('div'); el.className='float-txt'; el.textContent=text; el.style.color=color;
+  el.style.left=`calc(50% + ${ox||0}px)`; el.style.top='10px'; el.style.transform='translateX(-50%)';
+  wrap.appendChild(el); setTimeout(()=>el.remove(),1700);
+}
+function flashSVG(){const svg=document.querySelector('#heroSvg svg');if(!svg)return;svg.classList.add('svg-flash');setTimeout(()=>svg.classList.remove('svg-flash'),700);}
+function addLog(msg,cls){
+  const feed=document.getElementById('logFeed');
+  const entry=document.createElement('div'); entry.className='log-entry '+(cls||'');
+  entry.innerHTML=`<div class="log-time">${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div><div class="log-msg">${msg}</div>`;
+  feed.insertBefore(entry,feed.firstChild);
 }
 
-function flashSVG() {
-  const svg = document.querySelector('#heroSvg svg');
-  if (!svg) return;
-  svg.classList.add('svg-flash');
-  setTimeout(() => svg.classList.remove('svg-flash'), 700);
-}
-
-// ─────────────────────────────────────────
-//  SESSION LOG
-// ─────────────────────────────────────────
-function addLog(msg, cls) {
-  const feed  = document.getElementById('logFeed');
-  const entry = document.createElement('div');
-  entry.className = 'log-entry ' + (cls || '');
-  const now = new Date();
-  entry.innerHTML = `
-    <div class="log-time">${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-    <div class="log-msg">${msg}</div>`;
-  feed.insertBefore(entry, feed.firstChild);
-}
-
-// ─────────────────────────────────────────
-//  RENDER HERO CARD
-// ─────────────────────────────────────────
 function render() {
-  const h        = G.hero;
-  const l        = h.level;
-  const xpNeeded = l < MAX_LEVEL ? XP_PER_LEVEL[l] : 9999;
-
-  document.getElementById('heroName').textContent  = h.name;
-  document.getElementById('heroClass').textContent = CLASS_NAMES[Math.min(l-1, CLASS_NAMES.length-1)];
-  document.getElementById('heroBadge').textContent = 'LVL ' + l;
-  document.getElementById('hpTxt').textContent     = h.hp  + '/' + h.maxHp;
-  document.getElementById('xpTxt').textContent     = h.xp  + '/' + xpNeeded;
-  document.getElementById('hpBar').style.width     = Math.min(h.hp / h.maxHp * 100, 100) + '%';
-  document.getElementById('xpBar').style.width     = Math.min(h.xp / xpNeeded * 100, 100) + '%';
-  document.getElementById('spPill').textContent    = '✦ ' + h.skillPoints + ' SKILL POINT' + (h.skillPoints !== 1 ? 'S' : '');
-  document.getElementById('heroSvg').innerHTML     = buildCharSVG(l, 130, 170);
-
-  document.getElementById('heroStats').innerHTML = [
-    ['💪','STR','var(--str)', h.str],
-    ['🛡','END','var(--end)', h.end],
-    ['⚡','AGI','var(--agi)', h.agi],
-    ['🔥','PWR','var(--pow)', h.pow],
-  ].map(([ic, nm, cl, v]) => `
-    <div class="hero-stat-tile">
-      <span>${ic}</span>
-      <span style="font-size:.58rem;color:var(--dim);text-transform:uppercase">${nm}</span>
-      <span style="font-family:'Press Start 2P',monospace;font-size:.42rem;color:${cl};margin-left:auto">${v}</span>
-    </div>`).join('');
-
-  const navSP = document.getElementById('navSP');
-  if (navSP) navSP.textContent = '✦ ' + h.skillPoints + ' SP';
-
-  // PR board
-  const prList = document.getElementById('prList');
-  const prs    = Object.entries(G.prs);
-  prList.innerHTML = prs.length === 0
-    ? '<div class="empty-state">No PRs yet — start training!</div>'
-    : prs.sort((a,b) => b[1].weight - a[1].weight)
-        .map(([ex, pr]) => `
-          <div class="pr-row">
-            <span class="pr-ex">${ex}</span>
-            <span class="pr-wt">★ ${pr.weight} lbs</span>
-          </div>`).join('');
-
-  // datalist
-  const userEx = [...new Set(G.workouts.map(w => w.exercise))];
-  const allEx  = [...new Set([...userEx, ...commonExercises()])];
-  document.getElementById('exList').innerHTML = allEx.map(e => `<option value="${e}">`).join('');
+  const h=G.hero,l=h.level,xpNeeded=l<MAX_LEVEL?XP_PER_LEVEL[l]:9999;
+  document.getElementById('heroNameInput').value=h.name==='HERO'?'':h.name;
+  document.getElementById('heroNameInput').placeholder=h.name;
+  document.getElementById('heroClass').textContent=CLASS_NAMES[Math.min(l-1,CLASS_NAMES.length-1)];
+  document.getElementById('heroBadge').textContent='LVL '+l;
+  document.getElementById('hpTxt').textContent=h.hp+'/'+h.maxHp;
+  document.getElementById('xpTxt').textContent=h.xp+'/'+xpNeeded;
+  document.getElementById('hpBar').style.width=Math.min(h.hp/h.maxHp*100,100)+'%';
+  document.getElementById('xpBar').style.width=Math.min(h.xp/xpNeeded*100,100)+'%';
+  document.getElementById('spPill').textContent='✦ '+h.skillPoints+' SKILL POINT'+(h.skillPoints!==1?'S':'');
+  document.getElementById('heroSvg').innerHTML=buildCharSVG(l,130,170);
+  document.getElementById('heroStats').innerHTML=[
+    ['💪','STR','var(--str)',h.str],['🛡','END','var(--end)',h.end],
+    ['⚡','AGI','var(--agi)',h.agi],['🔥','PWR','var(--pow)',h.pow],
+  ].map(([ic,nm,cl,v])=>`<div class="hero-stat-tile"><span>${ic}</span><span style="font-size:.58rem;color:var(--dim);text-transform:uppercase">${nm}</span><span style="font-family:'Press Start 2P',monospace;font-size:.42rem;color:${cl};margin-left:auto">${v}</span></div>`).join('');
+  updateNavCounters(G);
+  const prs=Object.entries(G.prs);
+  document.getElementById('prList').innerHTML=prs.length===0
+    ?'<div class="empty-state">No PRs yet!</div>'
+    :prs.sort((a,b)=>b[1].weight-a[1].weight).map(([ex,pr])=>`<div class="pr-row"><span class="pr-ex">${ex}</span><span class="pr-wt">★ ${pr.weight} lbs</span></div>`).join('');
+  const userEx=[...new Set(G.workouts.map(w=>w.exercise))];
+  document.getElementById('exList').innerHTML=[...new Set([...userEx,...commonExercises()])].map(e=>`<option value="${e}">`).join('');
 }
 
-// ── init: start with 3 empty rows ──
-addRow();
-addRow();
-addRow();
+renderTemplates();
+addRow(); addRow(); addRow();
 render();
 </script>
 </body>
